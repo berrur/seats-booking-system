@@ -1,7 +1,7 @@
 Seats Booking System
 ====================
 
-Specifica della tesina:
+Specifica del Progetto:
 -----------------------
 
 Sistema di prenotazione posti remoto.
