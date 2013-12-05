@@ -1,4 +1,4 @@
-SEATS BOOKING SYSTEM
+Seats Booking System
 ====================
 
 Specifica della tesina:
