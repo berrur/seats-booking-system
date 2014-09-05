@@ -45,3 +45,7 @@ int function() {
 		}
 	}	
 }
+
+int main() {
+	function();
+}
