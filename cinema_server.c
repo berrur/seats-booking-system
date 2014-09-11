@@ -103,9 +103,16 @@ int listening_function() {
 
 int perform_action(int sock_descriptor, char * option) {
 	if (strcmp(option,"-S\n")==0) {
-		//show the map
-		printf("Sto qua? + %s + %d\n",option,sock_descriptor);
-		write(sock_descriptor,"mappa!",8);	
+		//showing seats map	
+	}
+	if (strcmp(option,"-R\n")==0) {
+		//reservation
+	}
+	if (strcmp(option,"-D\n")==0) {
+		//deleting reservation
+	}
+	if (strcmp(option,"-E\n")==0) {
+		//exit procedure
 	}
 }
 
