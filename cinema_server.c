@@ -27,21 +27,39 @@ void * thread_response(void * sender_info) {
 	int flag = 0;
 	char * action_response;
 	char option_select[1024];
-	char display_options[BUFFER] = "What do you want to do?\n -S show the seats map.\n -R reserve one or more seats.\n -E terminate the session.\n";
+	char display_options[BUFFER] = "What do you want to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E terminate the session.\n";
 
 	if(write(sender->socket_descriptor,display_options,BUFFER)==-1){perror("Writing error, display_option");}
 	if(read(sender->socket_descriptor,option_select,BUFFER)==-1){perror("Reading error,option_select");}
 
 	do {
-		if(strcmp(option_select,"-E\n") == 0 || strcmp(option_select,"-S\n") == 0 || strcmp(option_select,"-R\n") == 0) {
-			flag = 1;			
+
+		if(strcmp(option_select,"-E\n") == 0) {
+			flag = 1;
 			action_response = "RESPONSE_OK";			
 			write(sender->socket_descriptor,action_response,RES_DIM);
-		} else {
-			action_response = "RESPONSE_ERROR";
-			write(sender->socket_descriptor,action_response,RES_DIM);
-			read(sender->socket_descriptor,option_select,BUFFER);
+			perform_action(sender->socket_descriptor,option_select);
 		}
+		if(strcmp(option_select,"-S\n") == 0) {
+			action_response = "RESPONSE_OK";			
+			write(sender->socket_descriptor,action_response,RES_DIM);
+			perform_action(sender->socket_descriptor,option_select);
+		}
+		if(strcmp(option_select,"-R\n") == 0) {
+			action_response = "RESPONSE_OK";			
+			write(sender->socket_descriptor,action_response,RES_DIM);
+			perform_action(sender->socket_descriptor,option_select);
+		}
+		if(strcmp(option_select,"-D\n") == 0) {			
+			action_response = "RESPONSE_OK";			
+			write(sender->socket_descriptor,action_response,RES_DIM);
+			perform_action(sender->socket_descriptor,option_select);
+		}
+	
+		action_response = "RESPONSE_ERROR";
+		write(sender->socket_descriptor,action_response,RES_DIM);
+		read(sender->socket_descriptor,option_select,BUFFER);
+
 	} while(flag != 1);
 }
 
@@ -68,7 +86,7 @@ int listening_function() {
 	
 	int length_addr = sizeof(addr);
 	
-	////////////////////////////////////////
+
 	//Binding and Listening phase
 	if(bind(ds_sock,(struct sockaddr *)&addr,length_addr)==-1) { perror("Binding error"); exit(1); }
 	if(listen(ds_sock,BACKLOG)==-1) { perror("Listening error"); exit(1); }
@@ -80,6 +98,14 @@ int listening_function() {
 			conn_data.client_data = inc;
 			conn_data.socket_descriptor = ds_acc;
 			if(pthread_create(&tid,NULL,*thread_response,(void *)&conn_data)!= 0) {	perror("Thread Creation error"); }
+	}
+}
+
+int perform_action(int sock_descriptor, char * option) {
+	if (strcmp(option,"-S\n")==0) {
+		//show the map
+		printf("Sto qua? + %s + %d\n",option,sock_descriptor);
+		write(sock_descriptor,"mappa!",8);	
 	}
 }
 

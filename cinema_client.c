@@ -43,6 +43,8 @@ int connect_function() {
 		if(read(ds_sock,action_resp,RES_DIM)==-1){perror("Response reading error");exit(1);}
 		printf("Action Response: %s\n",action_resp);
 	} while(strcmp(action_resp,"RESPONSE_OK") != 0);
+	read(ds_sock,action_resp,RES_DIM);
+	printf("%s\n",action_resp);
 }
 
 
