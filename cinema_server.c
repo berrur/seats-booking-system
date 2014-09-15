@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <string.h>
+#include "seats.h"
 
 #define BACKLOG 10
 #define BUFFER 1024
@@ -40,25 +41,26 @@ void * thread_response(void * sender_info) {
 			write(sender->socket_descriptor,action_response,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
-		if(strcmp(option_select,"-S\n") == 0) {
+		else if(strcmp(option_select,"-S\n") == 0) {
 			action_response = "RESPONSE_OK";			
 			write(sender->socket_descriptor,action_response,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
-		if(strcmp(option_select,"-R\n") == 0) {
+		else if(strcmp(option_select,"-R\n") == 0) {
 			action_response = "RESPONSE_OK";			
 			write(sender->socket_descriptor,action_response,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
-		if(strcmp(option_select,"-D\n") == 0) {			
+		else if(strcmp(option_select,"-D\n") == 0) {			
 			action_response = "RESPONSE_OK";			
 			write(sender->socket_descriptor,action_response,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
-	
-		action_response = "RESPONSE_ERROR";
-		write(sender->socket_descriptor,action_response,RES_DIM);
-		read(sender->socket_descriptor,option_select,BUFFER);
+		else {
+			action_response = "RESPONSE_ERROR";
+			write(sender->socket_descriptor,action_response,RES_DIM);
+			read(sender->socket_descriptor,option_select,BUFFER);
+		}
 
 	} while(flag != 1);
 }
