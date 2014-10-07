@@ -26,39 +26,40 @@ void * thread_response(void * sender_info) {
 
 	struct incoming * sender = (struct incoming *)sender_info;
 	int flag = 0;
-	char * action_response;
+	char * action_response_ok = "RESPONSE_OK";
+	char * action_response_error = "RESPONSE_ERROR";
 	char option_select[1024];
 	char display_options[BUFFER] = "What do you want to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E terminate the session.\n";
 
 	if(write(sender->socket_descriptor,display_options,BUFFER)==-1){perror("Writing error, display_option");}
 	if(read(sender->socket_descriptor,option_select,BUFFER)==-1){perror("Reading error,option_select");}
-
+	
 	do {
 
 		if(strcmp(option_select,"-E\n") == 0) {
 			flag = 1;
-			action_response = "RESPONSE_OK";			
-			write(sender->socket_descriptor,action_response,RES_DIM);
+			write(sender->socket_descriptor,action_response_ok,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
 		else if(strcmp(option_select,"-S\n") == 0) {
+			flag = 1;
 			action_response = "RESPONSE_OK";			
-			write(sender->socket_descriptor,action_response,RES_DIM);
+			write(sender->socket_descriptor,action_response_ok,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
 		else if(strcmp(option_select,"-R\n") == 0) {
+			flag = 1;
 			action_response = "RESPONSE_OK";			
-			write(sender->socket_descriptor,action_response,RES_DIM);
+			write(sender->socket_descriptor,action_response_ok,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
 		else if(strcmp(option_select,"-D\n") == 0) {			
-			action_response = "RESPONSE_OK";			
-			write(sender->socket_descriptor,action_response,RES_DIM);
+			flag = 1;				
+			write(sender->socket_descriptor,action_response_ok,RES_DIM);
 			perform_action(sender->socket_descriptor,option_select);
 		}
 		else {
-			action_response = "RESPONSE_ERROR";
-			write(sender->socket_descriptor,action_response,RES_DIM);
+			write(sender->socket_descriptor,action_response_error,RES_DIM);
 			read(sender->socket_descriptor,option_select,BUFFER);
 		}
 
