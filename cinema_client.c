@@ -31,17 +31,19 @@ int connect_function() {
 	length_addr = sizeof(addr);
 	if(connect(ds_sock,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
 	printf(">>Connected!\n");
-	printf("=========================================\n");
 	int res;
 	if(read(ds_sock,msg,BUFFER)==-1){ perror("Read Error"); }
+	printf("=========================================\n");
 	printf("%s",msg);
 	printf("=========================================\n");
 	
-	do {	
+	do {
+
 		fgets(action,BUFFER,stdin);
 		if(write(ds_sock,action,RES_DIM)==-1){perror("Option selecting error");exit(1);}
 		if(read(ds_sock,action_resp,RES_DIM)==-1){perror("Response reading error");exit(1);}
 		printf("Action Response: %s\n",action_resp);
+
 	} while(strcmp(action_resp,"RESPONSE_OK") != 0);
 	read(ds_sock,action_resp,RES_DIM);
 	printf("%s\n",action_resp);
