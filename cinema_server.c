@@ -35,7 +35,7 @@ void * init_connection(void * sender_info) {
 	
 	char * action_response_ok = "RESPONSE_OK";
 	char * action_response_error = "RESPONSE_ERROR";
-	char display_options[BUFFER] = "What do you want to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E terminate the session.\n";
+	char display_options[BUFFER] = "What to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E terminate the session.\n";
 	
 char option_select[BUFFER];
 
@@ -81,9 +81,8 @@ void show_seatsmap(int sd) {
 	char response[16];	
 	memset(response,0,16);
 			
-	write(sd,"Sending seats map\n",30);
-	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
 	
+	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
 	read(fd,mat_raws,3);
 	read(fd,mat_clmns,3);
 
@@ -93,11 +92,11 @@ void show_seatsmap(int sd) {
 	mbuffer = (char *)malloc(size);
 	if (mbuffer == NULL ) { perror("Malloc Error!"); exit(1); }
 	memset(mbuffer,0,size);
+
 	if(read(fd,mbuffer,size) != size) { perror("Something wrong with the read"); }
 
-	write(sd,mat_raws,3);
-	
 	//Handshake before sending map
+	write(sd,mat_raws,3);
 	read(sd,response,15);
 	printf("%s\n",response);	
 	write(sd,mat_clmns,3);

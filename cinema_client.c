@@ -11,21 +11,33 @@
 #define RES_DIM 20
 
 int socket_descriptor;
+char mat;
 
+/*
+*
+* Declaration of functions
+*
+*/
 
+void action_chosen(char * option);
+void show_seatsmap();
+int connect_function();
+
+/*
+*	
+*	Receive the seats-map from the server and
+*	saves it to a matrix,
+*
+*/
 void show_seatsmap() {
+	int raws,clmns;
 	
-	int raws,clmns;	
+	char action[3];
 	char temp[32];
 	char * endptr;
-	char * check = "CHECK_OK";
 	char * mbuffer;
+	char * check = "CHECK_OK";
 
-		
-	read(socket_descriptor,temp,30);
-	printf("%s",temp);
-	
-	memset(temp,0,32);
 	read(socket_descriptor,temp,30);
 	raws = strtol(temp,&endptr,10);
 	
@@ -36,15 +48,22 @@ void show_seatsmap() {
 	clmns = strtol(temp,&endptr,10);
 
 	write(socket_descriptor,check,strlen(check));
-	printf("%d e %d\n",raws,clmns);
+	
 	size_t size = (raws*clmns + raws);
-	mbuffer = malloc(size);
+	mbuffer = (char *)malloc(size);
 	memset(mbuffer,0,size);
 
 	read(socket_descriptor,mbuffer,size);
-	
+	printf("---------------------------------\n");
+	printf("There are overall %d seats\n",(int)size - raws);
+	printf("---------------------------------\n");
 	printf("%s",mbuffer);	
-	
+	printf("---------------------------------\n");
+
+	printf("Insert -E to terminate this session\n");
+	printf("Or insert -R to book a seats\n");	
+	fgets(action,3,stdin);
+	action_chosen(action);
 }
 
 void action_chosen(char * option) {
