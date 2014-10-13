@@ -65,10 +65,12 @@ char option_select[BUFFER];
 	} while(flag != 1);
 }
 
-void show_seatsmap() {
+void show_seatsmap(int sd) {
+		
+	write(sd,"Invio mappa del cinema\n",30);
+	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
 	
-	
-	
+	close(fd);
 }
 
 
@@ -122,23 +124,38 @@ int perform_action(int sock_descriptor, char * option) {
 	}
 }
 
-int create_map(int raws, int columns) {
-	int i,j;
-	int fd;
-	fd = open("./seats_map/seats.map",O_CREAT|O_RDWR,0666);
-	if (fd < 0 ) { perror("Error in 'open'"); exit(1); }
- 
-	for(i=0; i < raws; i++) {
-		for(j=0; j < columns; j++) {
-			write(fd,"0",1);
-		}
+int create_map(char * raws, char * columns) {
+
+	int i,j,fd;
+	int raw,clmn;
+	char * endptr;
+
+	raw = strtol(raws,&endptr,10);	
+	clmn = strtol(columns,&endptr,10);	
+
+	if (open("./seats_map/seats.map",O_RDWR,0660) != -1) { return; }	
+	else {
+		fd = open("./seats_map/seats.map",O_CREAT | O_RDWR,0660);
+		if (fd < 0 ) { perror("Error in 'open'"); exit(1); }
+	
+		write(fd,raws,strlen(raws));
 		write(fd,"\n",1);
-	}
-	close(fd);
-	return 1;	
+		write(fd,columns,strlen(columns));
+		write(fd,"\n",1);	
+	
+		for(i=0; i < raw; i++) {
+			for(j=0; j < clmn; j++) {
+				write(fd,"O",1);
+			}
+			write(fd,"\n",1);
+		}
+
+		close(fd);
+		return 1;
+	}	
 }
 
 int main() {
-	create_map(10,10);
+	create_map("10","10");
 	listening_function();
 }
