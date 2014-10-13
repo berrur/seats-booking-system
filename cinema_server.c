@@ -86,21 +86,28 @@ void show_seatsmap(int sd) {
 	
 	read(fd,mat_raws,3);
 	read(fd,mat_clmns,3);
+
+	size_t size = (info.raws*info.clmn) + info.raws;
 	
-	mbuffer = malloc(
+	//Map loading
+	mbuffer = (char *)malloc(size);
+	if (mbuffer == NULL ) { perror("Malloc Error!"); exit(1); }
+	memset(mbuffer,0,size);
+	if(read(fd,mbuffer,size) != size) { perror("Something wrong with the read"); }
 
 	write(sd,mat_raws,3);
 	
+	//Handshake before sending map
 	read(sd,response,15);
 	printf("%s\n",response);	
-	
 	write(sd,mat_clmns,3);
-	
 	read(sd,response,15);
 	printf("%s\n",response);	
-
-		
 	
+	//Sending map
+	write(sd,mbuffer,size);
+	
+	free(mbuffer);	
 	close(fd);
 }
 
@@ -171,7 +178,7 @@ int create_map(char * raws, char * columns) {
 	
 		for(i=0; i < info.raws; i++) {
 			for(j=0; j < info.clmn; j++) {
-				write(fd,"O",1);
+				write(fd,"X",1);
 			}
 			write(fd,"\n",1);
 		}

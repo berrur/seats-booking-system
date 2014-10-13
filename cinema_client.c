@@ -37,13 +37,13 @@ void show_seatsmap() {
 
 	write(socket_descriptor,check,strlen(check));
 	printf("%d e %d\n",raws,clmns);
-
-	int size(raws*clmns + 1024);
+	size_t size = (raws*clmns + raws);
 	mbuffer = malloc(size);
 	memset(mbuffer,0,size);
 
 	read(socket_descriptor,mbuffer,size);
 	
+	printf("%s",mbuffer);	
 	
 }
 
