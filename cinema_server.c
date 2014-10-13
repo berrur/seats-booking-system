@@ -16,6 +16,13 @@
  *
  */
 
+struct server_data {
+	int raws;
+	int clmn;
+};
+
+struct server_data info;
+
 struct incoming {
 	int socket_descriptor;
 	struct sockaddr_in client_data;
@@ -66,9 +73,33 @@ char option_select[BUFFER];
 }
 
 void show_seatsmap(int sd) {
-		
-	write(sd,"Invio mappa del cinema\n",30);
+	
+	char mat_raws[3];
+	char mat_clmns[3];
+	char * mbuffer;
+
+	char response[16];	
+	memset(response,0,16);
+			
+	write(sd,"Sending seats map\n",30);
 	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
+	
+	read(fd,mat_raws,3);
+	read(fd,mat_clmns,3);
+	
+	mbuffer = malloc(
+
+	write(sd,mat_raws,3);
+	
+	read(sd,response,15);
+	printf("%s\n",response);	
+	
+	write(sd,mat_clmns,3);
+	
+	read(sd,response,15);
+	printf("%s\n",response);	
+
+		
 	
 	close(fd);
 }
@@ -82,18 +113,14 @@ int listening_function() {
 	
 	struct sockaddr_in addr,inc;
 	struct incoming conn_data;
-	
-	//signal management here
 
 	ds_sock = socket(AF_INET,SOCK_STREAM,0);
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = INADDR_ANY;
-	
-	
+		
 	int length_addr = sizeof(addr);
-
 
 	if(bind(ds_sock,(struct sockaddr *)&addr,length_addr)==-1) { perror("Binding error"); exit(1); }
 	if(listen(ds_sock,BACKLOG)==-1) { perror("Listening error"); exit(1); }
@@ -111,7 +138,7 @@ int listening_function() {
 
 int perform_action(int sock_descriptor, char * option) {
 	if (strcmp(option,"-S\n")==0) {
-		//showing seats map	
+		show_seatsmap(sock_descriptor);
 	}
 	if (strcmp(option,"-R\n")==0) {
 		//reservation
@@ -127,11 +154,10 @@ int perform_action(int sock_descriptor, char * option) {
 int create_map(char * raws, char * columns) {
 
 	int i,j,fd;
-	int raw,clmn;
 	char * endptr;
 
-	raw = strtol(raws,&endptr,10);	
-	clmn = strtol(columns,&endptr,10);	
+	info.raws = strtol(raws,&endptr,10);	
+	info.clmn = strtol(columns,&endptr,10);	
 
 	if (open("./seats_map/seats.map",O_RDWR,0660) != -1) { return; }	
 	else {
@@ -143,8 +169,8 @@ int create_map(char * raws, char * columns) {
 		write(fd,columns,strlen(columns));
 		write(fd,"\n",1);	
 	
-		for(i=0; i < raw; i++) {
-			for(j=0; j < clmn; j++) {
+		for(i=0; i < info.raws; i++) {
+			for(j=0; j < info.clmn; j++) {
 				write(fd,"O",1);
 			}
 			write(fd,"\n",1);
@@ -156,6 +182,26 @@ int create_map(char * raws, char * columns) {
 }
 
 int main() {
-	create_map("10","10");
+
+	/*	
+	 * i'm going to implement this laters
+	 *
+
+	sigset_t set;
+	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
+	struct sigaction sig_act;
+	sig_act.sa_handler = close_routine;
+	sig_act.sa_mask = set;
+	
+	if(sigaction(SIGINT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	if(sigaction(SIGTERM,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	if(sigaction(SIGABRT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	if(sigaction(SIGHUP,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+	*/
+
+	create_map("10","20");
 	listening_function();
+
 }
