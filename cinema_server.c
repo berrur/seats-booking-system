@@ -15,21 +15,24 @@
 * exit(1) methods have to be replaced with a closing procedure;
 *
 */
-
+void print_matrix();
 
 struct server_data {
 	int raws;
 	int clmn;
+	char ** matrix;
 };
 struct incoming {
 	int socket_descriptor;
 	struct sockaddr_in client_data;
 };
+struct reservation {
+	int number_seats_reserved;
+	char * seats_reserved;
+	char * reservation_code;
+};
 
 struct server_data info;
-static char * s_raws = "10";
-static char * s_clmn = "10";
-
 
 
 void * init_connection(void * sender_info) {
@@ -39,9 +42,9 @@ void * init_connection(void * sender_info) {
 	
 	char * action_response_ok = "RESPONSE_OK";
 	char * action_response_error = "RESPONSE_ERROR";
-	char display_options[BUFFER] = "What to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E terminate the session.\n";
+	char display_options[BUFFER] = "What to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E 	terminate the session.\n";
 	
-char option_select[BUFFER];
+	char option_select[BUFFER];
 
 	if(write(sender->socket_descriptor,display_options,BUFFER)==-1){perror("Writing error, display_option");}
 	if(read(sender->socket_descriptor,option_select,BUFFER)==-1){perror("Reading error,option_select");}
@@ -76,6 +79,7 @@ char option_select[BUFFER];
 	} while(flag != 1);
 }
 
+
 void show_seatsmap(int sd) {
 	
 	char mat_raws[3];
@@ -89,13 +93,8 @@ void show_seatsmap(int sd) {
 	sprintf(mat_raws,"%d",info.raws);
 
 	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
-
-	/*	
-	read(fd,mat_raws,3);
-	read(fd,mat_clmns,3);
-	*/
-
 	size_t size = (info.raws*info.clmn);
+
 	
 	//Map loading
 	mbuffer = (char *)malloc(size);
@@ -149,7 +148,6 @@ int listening_function() {
 			init_connection((void *)&conn_data);
 	}
 }
-	
 
 int perform_action(int sock_descriptor, char * option) {
 	if (strcmp(option,"-S\n")==0) {
@@ -178,32 +176,55 @@ int create_map(char * raws, char * columns) {
 	else {
 		fd = open("./seats_map/seats.map",O_CREAT | O_RDWR,0660);
 		if (fd < 0 ) { perror("Error in 'open'"); exit(1); }
-
-	   /*
-		write(fd,raws,strlen(raws));
-		write(fd,"\n",1);
-		write(fd,columns,strlen(columns));
-		write(fd,"\n",1);
-		*/
-	
+		
 		for(i=0; i < info.raws; i++) {
 			for(j=0; j < info.clmn; j++) {
 				write(fd,"X",1);
 			}
-			//write(fd,"\n",1);
 		}
-
+	
 		close(fd);
 		return 1;
 	}	
 }
 
+void matrix_init() {
+	int 	i,j;
+	char temp_string[1];
+	char temp_char;
+	
+	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
+	if (fd < 0) { perror("Open issue at matrix_init"); exit(1); }
+
+	info.matrix = (char **)malloc(info.raws*sizeof(char *));
+
+	for(i = 0; i < info.raws; i++)
+   	 info.matrix[i]=(char *) malloc(info.clmn*sizeof(char));
+
+	for(i = 0; i < info.raws; i++) {
+		for(j = 0; j < info.clmn; j++) {
+			//read(fd,matrix[i][j],1);
+			//printf("prova sta open\n");	
+			read(fd,temp_string,1);
+			//printf("primo ciclo?Inoltre %s,desc %d\n",temp_string,fd);
+			sscanf(temp_string," %c",&info.matrix[i][j]);	
+		}
+	}
+	//print_matrix();
+}
+
+void print_matrix() {
+	int i,j;
+	for(i = 0; i < info.raws; i++) {
+		for(j = 0; j < info.clmn; j++) {
+			printf("[%c] ",info.matrix[i][j]);
+		}
+		printf("\n");
+	}
+}
 int main() {
 
-	/*	
-	 * i'm going to implement this later
-	 *
-
+	/*	i'm going to implement this later
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
 	struct sigaction sig_act;
@@ -217,7 +238,9 @@ int main() {
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	*/
-	create_map("3","3");
+	
+	create_map("10","10");
+	matrix_init();
 	listening_function();
 
 }
