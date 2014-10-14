@@ -21,8 +21,8 @@ char mat;
 
 void action_chosen(char * option);
 void show_seatsmap();
+void print_map(char * mbuffer, int r, int c, int size);
 int connect_function();
-
 /*
 *	
 *	Receive the seats-map from the server and
@@ -49,21 +49,35 @@ void show_seatsmap() {
 
 	write(socket_descriptor,check,strlen(check));
 	
-	size_t size = (raws*clmns + raws);
+	size_t size = (raws*clmns);
 	mbuffer = (char *)malloc(size);
 	memset(mbuffer,0,size);
 
 	read(socket_descriptor,mbuffer,size);
 	printf("---------------------------------\n");
-	printf("There are overall %d seats\n",(int)size - raws);
+	printf("There are overall %d seats\n",(int)size);
 	printf("---------------------------------\n");
-	printf("%s",mbuffer);	
+	print_map(mbuffer,raws,clmns,(int)size);	
 	printf("---------------------------------\n");
 
 	printf("Insert -E to terminate this session\n");
 	printf("Or insert -R to book a seats\n");	
 	fgets(action,3,stdin);
 	action_chosen(action);
+}
+
+void print_map(char * mbuffer,int r,int c,int size) {
+	//printf("%c\n",mbuffer[0]);
+	int i = 0;
+	int s = 0;	
+	int j;
+	for(i = 0; i < r; i++) {
+		for(j = 0; j < c;j++) {	
+			printf("[%d - %d : %c]",i,j,mbuffer[s]);
+			s++;		
+ 		}
+		printf("\n");
+	}
 }
 
 void action_chosen(char * option) {

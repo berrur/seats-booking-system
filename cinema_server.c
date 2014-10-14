@@ -12,21 +12,25 @@
 #define RES_DIM 20
 
 /*
- * exit(1) methods have to be replaced with a closing procedure;
- *
- */
+* exit(1) methods have to be replaced with a closing procedure;
+*
+*/
+
 
 struct server_data {
 	int raws;
 	int clmn;
 };
-
-struct server_data info;
-
 struct incoming {
 	int socket_descriptor;
 	struct sockaddr_in client_data;
 };
+
+struct server_data info;
+static char * s_raws = "10";
+static char * s_clmn = "10";
+
+
 
 void * init_connection(void * sender_info) {
 
@@ -80,20 +84,25 @@ void show_seatsmap(int sd) {
 
 	char response[16];	
 	memset(response,0,16);
-			
 	
+	sprintf(mat_clmns,"%d",info.clmn);
+	sprintf(mat_raws,"%d",info.raws);
+
 	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
+
+	/*	
 	read(fd,mat_raws,3);
 	read(fd,mat_clmns,3);
+	*/
 
-	size_t size = (info.raws*info.clmn) + info.raws;
+	size_t size = (info.raws*info.clmn);
 	
 	//Map loading
 	mbuffer = (char *)malloc(size);
 	if (mbuffer == NULL ) { perror("Malloc Error!"); exit(1); }
 	memset(mbuffer,0,size);
 
-	if(read(fd,mbuffer,size) != size) { perror("Something wrong with the read"); }
+	if(read(fd,mbuffer,size) < size) { perror("Something wrong with the read"); }
 
 	//Handshake before sending map
 	write(sd,mat_raws,3);
@@ -169,17 +178,19 @@ int create_map(char * raws, char * columns) {
 	else {
 		fd = open("./seats_map/seats.map",O_CREAT | O_RDWR,0660);
 		if (fd < 0 ) { perror("Error in 'open'"); exit(1); }
-	
+
+	   /*
 		write(fd,raws,strlen(raws));
 		write(fd,"\n",1);
 		write(fd,columns,strlen(columns));
-		write(fd,"\n",1);	
+		write(fd,"\n",1);
+		*/
 	
 		for(i=0; i < info.raws; i++) {
 			for(j=0; j < info.clmn; j++) {
 				write(fd,"X",1);
 			}
-			write(fd,"\n",1);
+			//write(fd,"\n",1);
 		}
 
 		close(fd);
@@ -190,7 +201,7 @@ int create_map(char * raws, char * columns) {
 int main() {
 
 	/*	
-	 * i'm going to implement this laters
+	 * i'm going to implement this later
 	 *
 
 	sigset_t set;
@@ -206,8 +217,7 @@ int main() {
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	*/
-
-	create_map("10","20");
+	create_map("3","3");
 	listening_function();
 
 }
