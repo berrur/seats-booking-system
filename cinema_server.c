@@ -94,30 +94,22 @@ void show_seatsmap(int sd) {
 	sprintf(mat_clmns,"%d",info.clmn);
 	sprintf(mat_raws,"%d",info.raws);
 
-	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
-	size_t size = (info.raws*info.clmn);
-
-	
-	//Map loading
-	mbuffer = (char *)malloc(size);
-	if (mbuffer == NULL ) { perror("Malloc Error!"); exit(1); }
-	memset(mbuffer,0,size);
-
-	if(read(fd,mbuffer,size) < size) { perror("Something wrong with the read"); }
-
 	//Handshake before sending map
-	write(sd,mat_raws,3);
-	read(sd,response,15);
-	printf("%s\n",response);	
+	write(sd,mat_raws,3);	
 	write(sd,mat_clmns,3);
-	read(sd,response,15);
-	printf("%s\n",response);	
 	
-	//Sending map
-	write(sd,mbuffer,size);
+	//Sending map;
+	char * qua;
+	int i,j;	
+	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;
+	char str_buff[1];
 	
-	free(mbuffer);	
-	close(fd);
+	for(i = 0; i < info.raws; i++) {
+		for(j = 0; j < info.clmn; j++) {
+			sprintf(str_buff,"%c",temp_matrix[i][j]);
+			write(sd,str_buff,1);
+		}
+	}
 }
 
 
@@ -166,13 +158,13 @@ int perform_action(int sock_descriptor, char * option) {
 	}
 }
 
-int create_map(char * raws, char * columns) {
+int create_map(int raws,int columns) {
 
 	int i,j,fd;
 	char * endptr;
 
-	info.raws = strtol(raws,&endptr,10);	
-	info.clmn = strtol(columns,&endptr,10);	
+	info.raws = raws;	
+	info.clmn = columns;	
 
 	if (open("./seats_map/seats.map",O_RDWR,0660) != -1) { return; }	
 	else {
@@ -250,7 +242,7 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	*/
 	
-	create_map("5","5");
+	create_map(4,4);
 	matrix_init();
 	listening_function();
 

@@ -11,11 +11,10 @@
 #define RES_DIM 20
 
 int socket_descriptor;
-char mat;
 
 /*
 *
-* Declaration of functions
+* functions declarations
 *
 */
 
@@ -23,37 +22,44 @@ void action_chosen(char * option);
 void show_seatsmap();
 void print_map(char * mbuffer, int r, int c, int size);
 int connect_function();
+
 /*
 *	
 *	Receive the seats-map from the server and
-*	saves it to a matrix,
+*	saves it into a matrix,
 *
 */
+
 void show_seatsmap() {
-	int raws,clmns;
+	int raws,clmns,i,j;
 	
 	char action[3];
-	char temp[32];
+	char temp_read[1];
+	char temp[10];
 	char * endptr;
 	char * mbuffer;
 	char * check = "CHECK_OK";
 
-	read(socket_descriptor,temp,30);
+	read(socket_descriptor,temp,3);
 	raws = strtol(temp,&endptr,10);
-	
-	write(socket_descriptor,check,strlen(check));
-	
-	memset(temp,0,32);
-	read(socket_descriptor,temp,30);
+		
+	memset(temp,0,10);
+
+	read(socket_descriptor,temp,3);
 	clmns = strtol(temp,&endptr,10);
 
-	write(socket_descriptor,check,strlen(check));
-	
 	size_t size = (raws*clmns);
-	mbuffer = (char *)malloc(size);
-	memset(mbuffer,0,size);
+	mbuffer = (char *)malloc(size*sizeof(char));
+	memset(mbuffer,0,size*sizeof(char));
+		
+	char (*matrix)[clmns] = (char (*) [clmns])mbuffer;		
+	for(i = 0; i < raws; i++) {
+		for(j = 0; j < clmns; j++) {
+			read(socket_descriptor,temp_read,1);
+			sscanf(temp_read," %c",&matrix[i][j]);
+		}
+	}
 
-	read(socket_descriptor,mbuffer,size);
 	printf("---------------------------------\n");
 	printf("There are overall %d seats\n",(int)size);
 	printf("---------------------------------\n");
@@ -64,20 +70,22 @@ void show_seatsmap() {
 	printf("Or insert -R to book a seats\n");	
 	fgets(action,3,stdin);
 	action_chosen(action);
+
 }
 
 void print_map(char * mbuffer,int r,int c,int size) {
-	//printf("%c\n",mbuffer[0]);
-	int i = 0;
-	int s = 0;	
-	int j;
+
+	int i,j;
+	
+	char (*matrix)[c] = (char (*) [c])mbuffer;
+	
 	for(i = 0; i < r; i++) {
 		for(j = 0; j < c;j++) {	
-			printf("[%d - %d : %c]",i,j,mbuffer[s]);
-			s++;		
+			printf("[%d - %d : %c]",i,j,matrix[i][j]);		
  		}
 		printf("\n");
 	}
+
 }
 
 void action_chosen(char * option) {
