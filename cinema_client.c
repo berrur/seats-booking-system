@@ -18,7 +18,7 @@ int socket_descriptor;
 *
 */
 
-void action_chosen(char * option);
+void action_chooser(int sd);
 void show_seatsmap();
 void print_map(char * mbuffer, int r, int c, int size);
 int connect_function();
@@ -33,7 +33,7 @@ int connect_function();
 void show_seatsmap() {
 	int raws,clmns,i,j;
 	
-	char action[3];
+	char action[4];
 	char temp_read[1];
 	char temp[10];
 	char * endptr;
@@ -67,10 +67,8 @@ void show_seatsmap() {
 	printf("---------------------------------\n");
 
 	printf("Insert -E to terminate this session\n");
-	printf("Or insert -R to book a seats\n");	
-	fgets(action,3,stdin);
-	action_chosen(action);
-
+	printf("Or insert -R to book a seats\n");
+	return;
 }
 
 void print_map(char * mbuffer,int r,int c,int size) {
@@ -88,19 +86,42 @@ void print_map(char * mbuffer,int r,int c,int size) {
 
 }
 
-void action_chosen(char * option) {
-	if (strcmp(option,"-S\n")==0) {
-		show_seatsmap();	
-	}
-	if (strcmp(option,"-R\n")==0) {
-		//reservation
-	}
-	if (strcmp(option,"-D\n")==0) {
-		//deleting reservation
-	}
-	if (strcmp(option,"-E\n")==0) {
-		//exit procedure
-	}
+void action_chooser(int sd) {
+	char option[10];
+
+	printf("=========================================\n");
+	printf("What to do?\n");
+	printf("-S show the seats map.\n");
+	printf("-R reserve one or more seats.\n");
+	printf("-D cancel reservation.\n");
+	printf("-E terminate the session.\n");
+	printf("=========================================\n");
+	
+	fgets(option,10,stdin);
+
+	printf("%d\n",(int)strlen(option));
+	
+	do {
+	
+		if (strcmp(option,"-S\n")==0) {
+			write(sd,option,10);
+			show_seatsmap();
+		}
+		else if (strcmp(option,"-R\n")==0) {
+			//reservation
+		}
+		else if (strcmp(option,"-D\n")==0) {
+			//deleting reservation
+		}
+		else if (strcmp(option,"-E\n")==0) {
+			//exit procedure
+		}
+		else {
+			printf("Error: use -R -S -D -E\n");	
+		}
+		fgets(option,10,stdin);
+
+	} while(1);
 }
 
 int connect_function() {
@@ -115,31 +136,18 @@ int connect_function() {
 
 	struct sockaddr_in addr;
 	
-	ds_sock = socket(AF_INET,SOCK_STREAM,0);
-	socket_descriptor = ds_sock;	
+	socket_descriptor = socket(AF_INET,SOCK_STREAM,0);	
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 	inet_aton(ip,&addr.sin_addr);
 
 	length_addr = sizeof(addr);
-	if(connect(ds_sock,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
+	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
 	printf(">>Connected!\n");
-	int res;
-	if(read(ds_sock,msg,BUFFER)==-1){ perror("Read Error"); }
-	printf("=========================================\n");
-	printf("%s",msg);
-	printf("=========================================\n");
-	
-	do {
 
-		fgets(action,BUFFER,stdin);
-		if(write(ds_sock,action,RES_DIM)==-1){perror("Option selecting error");exit(1);}
-		if(read(ds_sock,action_resp,RES_DIM)==-1){perror("Response reading error");exit(1);}
-		printf("Action Response: %s\n",action_resp);
-
-	} while(strcmp(action_resp,"RESPONSE_OK") != 0);
-	action_chosen(action);	
+	action_chooser(socket_descriptor);
+		
 }
 
 int main() {

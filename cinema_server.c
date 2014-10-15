@@ -37,48 +37,12 @@ struct reservation {
 struct server_data info;
 
 
-void * init_connection(void * sender_info) {
+void init_connection(int sd) {
 
-	struct incoming * sender = (struct incoming *)sender_info;
-	int flag = 0;
-	
-	char * action_response_ok = "RESPONSE_OK";
-	char * action_response_error = "RESPONSE_ERROR";
-	char display_options[BUFFER] = "What to do?\n -S show the seats map.\n -R reserve one or more seats.\n -D Cancel reservation.\n -E 	terminate the session.\n";
-	
-	char option_select[BUFFER];
+	char option[10];
 
-	if(write(sender->socket_descriptor,display_options,BUFFER)==-1){perror("Writing error, display_option");}
-	if(read(sender->socket_descriptor,option_select,BUFFER)==-1){perror("Reading error,option_select");}
-	
-	do {
-
-		if(strcmp(option_select,"-E\n") == 0) {
-			flag = 1;
-			write(sender->socket_descriptor,action_response_ok,RES_DIM);
-			perform_action(sender->socket_descriptor,option_select);
-		}
-		else if(strcmp(option_select,"-S\n") == 0) {
-			flag = 1;	
-			write(sender->socket_descriptor,action_response_ok,RES_DIM);
-			perform_action(sender->socket_descriptor,option_select);
-		}
-		else if(strcmp(option_select,"-R\n") == 0) {
-			flag = 1;	
-			write(sender->socket_descriptor,action_response_ok,RES_DIM);
-			perform_action(sender->socket_descriptor,option_select);
-		}
-		else if(strcmp(option_select,"-D\n") == 0) {			
-			flag = 1;				
-			write(sender->socket_descriptor,action_response_ok,RES_DIM);
-			perform_action(sender->socket_descriptor,option_select);
-		}
-		else {
-			write(sender->socket_descriptor,action_response_error,RES_DIM);
-			read(sender->socket_descriptor,option_select,BUFFER);
-		}
-
-	} while(flag != 1);
+	if(read(sd,option,10)==-1) {perror("Reading error init_connection");}
+	perform_action(sd,option);
 }
 
 
@@ -86,10 +50,10 @@ void show_seatsmap(int sd) {
 	
 	char mat_raws[3];
 	char mat_clmns[3];
+	char option[10];
 	char * mbuffer;
 
-	char response[16];	
-	memset(response,0,16);
+	//memset(option,0,10);
 	
 	sprintf(mat_clmns,"%d",info.clmn);
 	sprintf(mat_raws,"%d",info.raws);
@@ -110,6 +74,10 @@ void show_seatsmap(int sd) {
 			write(sd,str_buff,1);
 		}
 	}
+	read(sd,option,10);
+	perform_action(sd,option);
+
+	
 }
 
 
@@ -137,9 +105,7 @@ int listening_function() {
 	while(1) {		
 		while((ds_acc = accept(ds_sock,(struct sockaddr *)&inc, &length_inc))==-1 );
 			printf(">>Connected to socket %d \n",ds_acc);
-			conn_data.client_data = inc;
-			conn_data.socket_descriptor = ds_acc;
-			init_connection((void *)&conn_data);
+			init_connection(ds_acc);
 	}
 }
 
