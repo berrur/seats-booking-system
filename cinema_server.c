@@ -6,6 +6,8 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <fcntl.h>
+#include <argp.h> 
+
 
 #define BACKLOG 10
 #define BUFFER 1024
@@ -20,7 +22,7 @@ void print_matrix();
 struct server_data {
 	int raws;
 	int clmn;
-	char ** matrix;
+	char * matrix;
 };
 struct incoming {
 	int socket_descriptor;
@@ -196,34 +198,43 @@ void matrix_init() {
 	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
 	if (fd < 0) { perror("Open issue at matrix_init"); exit(1); }
 
-	info.matrix = (char **)malloc(info.raws*sizeof(char *));
-
-	for(i = 0; i < info.raws; i++)
-   	 info.matrix[i]=(char *) malloc(info.clmn*sizeof(char));
-
+	info.matrix = (char *)malloc(info.raws*info.clmn*sizeof(char));
+	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;	
+	//How to read this ^: "temp_matrix is a pointer of info.clmn characters"
+	
 	for(i = 0; i < info.raws; i++) {
-		for(j = 0; j < info.clmn; j++) {
-			//read(fd,matrix[i][j],1);
-			//printf("prova sta open\n");	
+		for(j = 0; j < info.clmn; j++) {	
 			read(fd,temp_string,1);
-			//printf("primo ciclo?Inoltre %s,desc %d\n",temp_string,fd);
-			sscanf(temp_string," %c",&info.matrix[i][j]);	
+			sscanf(temp_string," %c",&temp_matrix[i][j]);	
 		}
 	}
-	//print_matrix();
+	print_matrix();
 }
 
 void print_matrix() {
 	int i,j;
+	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;	
+	
 	for(i = 0; i < info.raws; i++) {
 		for(j = 0; j < info.clmn; j++) {
-			printf("[%c] ",info.matrix[i][j]);
+			printf("[%c] ",temp_matrix[i][j]);
 		}
 		printf("\n");
 	}
 }
-int main() {
 
+error_t parse_opt(int key,char* arg,struct argp_state * state) {
+	switch(key) {
+		case 'n':
+					//dosomething
+					printf("ciao\n");
+	}
+	return 0;
+}
+
+
+int main(int argc, char **argv) {
+	
 	/*	i'm going to implement this later
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
@@ -239,7 +250,7 @@ int main() {
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	*/
 	
-	create_map("10","10");
+	create_map("5","5");
 	matrix_init();
 	listening_function();
 
