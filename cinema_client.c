@@ -145,12 +145,11 @@ int connect_function() {
 	length_addr = sizeof(addr);
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
 	printf(">>Connected!\n");
-
-	action_chooser(socket_descriptor);
 		
 }
 
 int main() {
 	connect_function();
+	action_chooser(socket_descriptor);
 }
 

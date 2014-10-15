@@ -36,7 +36,7 @@ struct reservation {
 
 struct server_data info;
 
-
+/*
 void init_connection(int sd) {
 
 	char option[10];
@@ -44,6 +44,7 @@ void init_connection(int sd) {
 	if(read(sd,option,10)==-1) {perror("Reading error init_connection");}
 	perform_action(sd,option);
 }
+*/
 
 
 void show_seatsmap(int sd) {
@@ -74,8 +75,7 @@ void show_seatsmap(int sd) {
 			write(sd,str_buff,1);
 		}
 	}
-	read(sd,option,10);
-	perform_action(sd,option);
+	perform_action(sd);
 
 	
 }
@@ -105,11 +105,15 @@ int listening_function() {
 	while(1) {		
 		while((ds_acc = accept(ds_sock,(struct sockaddr *)&inc, &length_inc))==-1 );
 			printf(">>Connected to socket %d \n",ds_acc);
-			init_connection(ds_acc);
+			perform_action(ds_acc);
 	}
 }
 
-int perform_action(int sock_descriptor, char * option) {
+int perform_action(int sock_descriptor) {
+	char option[10];
+
+	if(read(sock_descriptor,option,10)==-1) {perror("Reading error init_connection");}
+
 	if (strcmp(option,"-S\n")==0) {
 		show_seatsmap(sock_descriptor);
 	}
