@@ -29,9 +29,13 @@ struct incoming {
 	struct sockaddr_in client_data;
 };
 struct reservation {
-	int number_seats_reserved;
-	char * seats_reserved;
 	char * reservation_code;
+	int number_seats_reserved;
+	struct seat * seast; //array of reserved seats;	
+};
+struct seat{
+	unsigned int row;
+	unsigned int col;
 };
 
 struct server_data info;
@@ -118,7 +122,7 @@ int perform_action(int sock_descriptor) {
 		show_seatsmap(sock_descriptor);
 	}
 	if (strcmp(option,"-R\n")==0) {
-		//reservation
+		//reservation(sock_descriptor);
 	}
 	if (strcmp(option,"-D\n")==0) {
 		//deleting reservation
@@ -174,6 +178,7 @@ void matrix_init() {
 }
 
 void print_matrix() {
+	
 	int i,j;
 	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;	
 	

@@ -11,6 +11,13 @@
 #define RES_DIM 20
 
 int socket_descriptor;
+int cinema_raws;
+int cinema_clmn;
+
+struct seat{
+	unsigned int row;
+	unsigned int col;
+};
 
 /*
 *
@@ -20,7 +27,8 @@ int socket_descriptor;
 
 void action_chooser(int sd);
 void show_seatsmap();
-void print_map(char * mbuffer, int r, int c, int size);
+void print_map(char * mbuffer);
+void seats_reservation();
 int connect_function();
 
 /*
@@ -30,8 +38,51 @@ int connect_function();
 *
 */
 
+
+
+void seats_reservation() {
+
+	int res;
+	char line[100];
+	unsigned int seats_num;
+
+	//loop until sscanf return 0;	
+	do{
+		printf("Insert the number of seats you want to reserve: \n");
+		fgets(line,100,stdin);
+		res = sscanf(line,"%u\n",&seats_num); 
+	} while(res < 1);
+	
+	if (seats_num == 0) exit(0);
+
+	
+	struct seat seats[seats_num];
+	
+	int i = 0;
+	
+	//loop until sscanf returns one or less value
+	while (i < seats_num) {
+		do {
+			printf("Insert rows and columns for seats[%d]: ",i);
+			fflush(stdout);
+			fgets(line,100,stdin);
+			res = sscanf(line,"%u %u",&seats[i].row,&seats[i].col);
+		} while(res<2);
+		i++;
+	}
+
+	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
+	if(res == -1){perror("send");exit(-1);}
+	
+	res = write(socket_descriptor,seats,sizeof(seats));
+	if(res < sizeof(seats)) { perror("send seats data"); exit(-1); }
+
+
+}
+
+
 void show_seatsmap() {
-	int raws,clmns,i,j;
+	int i,j;
 	
 	char action[4];
 	char temp_read[1];
@@ -41,20 +92,20 @@ void show_seatsmap() {
 	char * check = "CHECK_OK";
 
 	read(socket_descriptor,temp,3);
-	raws = strtol(temp,&endptr,10);
+	cinema_raws = strtol(temp,&endptr,10);
 		
 	memset(temp,0,10);
 
 	read(socket_descriptor,temp,3);
-	clmns = strtol(temp,&endptr,10);
+	cinema_clmn = strtol(temp,&endptr,10);
 
-	size_t size = (raws*clmns);
+	size_t size = (cinema_raws*cinema_clmn);
 	mbuffer = (char *)malloc(size*sizeof(char));
 	memset(mbuffer,0,size*sizeof(char));
 		
-	char (*matrix)[clmns] = (char (*) [clmns])mbuffer;		
-	for(i = 0; i < raws; i++) {
-		for(j = 0; j < clmns; j++) {
+	char (*matrix)[cinema_clmn] = (char (*) [cinema_clmn])mbuffer;		
+	for(i = 0; i < cinema_raws; i++) {
+		for(j = 0; j < cinema_clmn; j++) {
 			read(socket_descriptor,temp_read,1);
 			sscanf(temp_read," %c",&matrix[i][j]);
 		}
@@ -63,7 +114,7 @@ void show_seatsmap() {
 	printf("---------------------------------\n");
 	printf("There are overall %d seats\n",(int)size);
 	printf("---------------------------------\n");
-	print_map(mbuffer,raws,clmns,(int)size);	
+	print_map(mbuffer);	
 	printf("---------------------------------\n");
 
 	printf("Insert -E to terminate this session\n");
@@ -71,14 +122,14 @@ void show_seatsmap() {
 	return;
 }
 
-void print_map(char * mbuffer,int r,int c,int size) {
+void print_map(char * mbuffer) {
 
 	int i,j;
 	
-	char (*matrix)[c] = (char (*) [c])mbuffer;
+	char (*matrix)[cinema_clmn] = (char (*) [cinema_clmn])mbuffer;
 	
-	for(i = 0; i < r; i++) {
-		for(j = 0; j < c;j++) {	
+	for(i = 0; i < cinema_raws; i++) {
+		for(j = 0; j < cinema_clmn;j++) {	
 			printf("[%d - %d : %c]",i,j,matrix[i][j]);		
  		}
 		printf("\n");
@@ -108,7 +159,8 @@ void action_chooser(int sd) {
 			show_seatsmap();
 		}
 		else if (strcmp(option,"-R\n")==0) {
-			//reservation
+			write(sd,option,10);
+			seats_reservation();
 		}
 		else if (strcmp(option,"-D\n")==0) {
 			//deleting reservation
