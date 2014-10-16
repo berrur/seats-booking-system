@@ -71,12 +71,13 @@ void seats_reservation() {
 		i++;
 	}
 
+	//send the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
-	if(res == -1){perror("send");exit(-1);}
+	if(res == -1){ perror("reservation send error"); exit(-1); }
 	
+	//sends the coordinates of the seats you have chosen
 	res = write(socket_descriptor,seats,sizeof(seats));
-	if(res < sizeof(seats)) { perror("send seats data"); exit(-1); }
-
+	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(-1); }
 
 }
 
@@ -150,8 +151,6 @@ void action_chooser(int sd) {
 	
 	fgets(option,10,stdin);
 
-	printf("%d\n",(int)strlen(option));
-	
 	do {
 	
 		if (strcmp(option,"-S\n")==0) {
@@ -196,7 +195,7 @@ int connect_function() {
 
 	length_addr = sizeof(addr);
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
-	printf(">>Connected!\n");
+	printf("--Estabilished connection with the server--\n");
 		
 }
 

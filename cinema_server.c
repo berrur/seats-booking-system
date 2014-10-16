@@ -51,6 +51,38 @@ void init_connection(int sd) {
 */
 
 
+void reservation(int sd) {
+	
+	int res;
+	unsigned int seats_num = 0;
+	
+	res = read(sd,&seats_num,sizeof(seats_num));
+	
+	if(res < sizeof(seats_num)){
+
+		if(res == -1)perror("receive number of seats");
+		else puts("Error: recived invalid seats num");
+
+	}
+		
+	//receive seats
+	struct seat seats[seats_num];
+	res = read(sd,seats,sizeof(seats),0);
+
+	if(res < sizeof(seats)){
+
+		if(res == -1)perror("receive seats");
+		else puts("Error: mismatch of seats number recived");
+
+	
+	}
+	int i;
+	for (i = 0; i < seats_num; i++ ) {
+		printf("%u,%u\n",seats[i].row,seats[i].col);
+	}
+}
+
+
 void show_seatsmap(int sd) {
 	
 	char mat_raws[3];
@@ -122,7 +154,7 @@ int perform_action(int sock_descriptor) {
 		show_seatsmap(sock_descriptor);
 	}
 	if (strcmp(option,"-R\n")==0) {
-		//reservation(sock_descriptor);
+		reservation(sock_descriptor);
 	}
 	if (strcmp(option,"-D\n")==0) {
 		//deleting reservation
