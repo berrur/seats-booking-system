@@ -47,6 +47,7 @@ struct reservation * res_list;
 
 void print_matrix();
 void occupy_seats(unsigned int s_num,struct seat * seats_occ);
+void perform_reservation(unsigned int seats_num,struct seat * seats_occ);
 
 void reservation(int sd) {
 	
@@ -73,15 +74,35 @@ void reservation(int sd) {
 	
 	}
 	
-	//print the seats, yet another error check
+	occupy_seats(seats_num,seats);
+	perform_reservation(seats_num,seats);
+	save_reservation_array(info.raws*info.clmn,10);
+	
+	
+}
+
+void perform_reservation(unsigned int seats_num,struct seat * seats_occ) {
+	
 	int i;
-	for (i = 0; i < seats_num; i++ ) {
-		printf("%u,%u\n",seats[i].row,seats[i].col);
+	struct reservation new_entry;
+	
+	for(i = 0; i < info.raws*info.clmn; i++) {
+		if (res_list[i].s_num == 0) { 
+			break;
+		}
+		i++;
 	}
 	
-	occupy_seats(seats_num,seats);
+	new_entry.s_num = seats_num;
 	
+	void * seats_temp = calloc(seats_num,sizeof(struct seat));
+	if (seats_temp == NULL ) { perror("Calloc error in perform reservation!"); }
+		
+	new_entry.seats = memcpy(seats_temp,seats_occ,sizeof(struct seat)*seats_num);
+	new_entry.reservation_code = "codice1234";
 	
+	res_list[i] = new_entry;
+		
 }
 
 
@@ -224,31 +245,12 @@ void print_matrix() {
 	}
 }
 
-/*
-void load_reservation_array() {
-
-	int fd = open("./seats_res/reservations",O_CREAT | O_RDONLY,0660);
-	if (fd < 0) { perror("Open error during res loading"); }
-
-	res_list = (struct reservation * )calloc(info.raws*info.clmn,sizeof(struct reservation));
-	
-	int i = 0;
-	int j = 0;	
-	while(i < info.raws*info.clmn) {
-
-		if (read(fd,res_list[i].reservation_code,10) == -1) { perror("res_code"); }
-		printf("%s\n",res_list[i].reservation_code);
-		
-		if(read(fd,res_list[i].number_seats_reserved,sizeof(int)) == -1) { perror("numb_seats_res"); }
-		printf("%d\n",res_list[i].number_seats_reserved);
-
-		
-	}
-}*/
 
 int save_reservation_array(unsigned int arr_dim,unsigned int chiav_dim){
+	
 	int res;
 	int des_f = open("./seats_res/reservations",O_CREAT | O_WRONLY,0660);
+	
 	struct reservation * punt = res_list;
 	while(punt - res_list < arr_dim){
 		
@@ -294,8 +296,10 @@ int save_reservation_array(unsigned int arr_dim,unsigned int chiav_dim){
 
 
 int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
+	
 	int res;
 	int des_f = open("./seats_res/reservations",O_CREAT | O_RDONLY,0660);
+	
 	struct reservation * punt = res_list;
 	while(punt - res_list < arr_dim){
 		
@@ -337,7 +341,7 @@ int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
 			}
 			
 			//refill matrix
-			//occupy_seats(punt->s_num,punt->seats);
+			occupy_seats(punt->s_num,punt->seats);
 		}
 		punt++;	
 	}
@@ -356,6 +360,10 @@ void occupy_seats(unsigned int num, struct seat * seats_occ) {
 	}
 }
 
+void res_list_init() {
+
+}
+
 int main(int argc, char **argv) {
 	
 	/*	i'm going to implement this later
@@ -371,10 +379,12 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGHUP,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
-	*/
-	
+	*/	
 	create_map(4,4);
+	struct reservation posti_occupati[info.raws*info.clmn*sizeof(struct reservation *)];
+	res_list = posti_occupati;
 	matrix_init();
+	load_reservation_array(info.raws*info.clmn,10);
 	listening_function();
 
 }
