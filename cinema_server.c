@@ -17,39 +17,36 @@
 * exit(1) methods have to be replaced with a closing procedure;
 *
 */
-void print_matrix();
+
+//reservation_code length is 10 by default
 
 struct server_data {
 	int raws;
 	int clmn;
 	char * matrix;
 };
+/*
 struct incoming {
 	int socket_descriptor;
 	struct sockaddr_in client_data;
+}
+*/	
+struct reservation { 				//entry of an array of reservations
+	char * reservation_code;		//unique code generated for a single reservation
+	unsigned int s_num;				//number of seats reserved for a single reservation
+	struct seat * seats; 			//array of reserved seats;	
 };
-struct reservation {
-	char * reservation_code;
-	int number_seats_reserved;
-	struct seat * seast; //array of reserved seats;	
-};
-struct seat{
+struct seat {
 	unsigned int row;
 	unsigned int col;
 };
 
 struct server_data info;
+struct reservation * res_list;
 
-/*
-void init_connection(int sd) {
 
-	char option[10];
-
-	if(read(sd,option,10)==-1) {perror("Reading error init_connection");}
-	perform_action(sd,option);
-}
-*/
-
+void print_matrix();
+void occupy_seats(unsigned int s_num,struct seat * seats_occ);
 
 void reservation(int sd) {
 	
@@ -61,7 +58,7 @@ void reservation(int sd) {
 	if(res < sizeof(seats_num)){
 
 		if(res == -1)perror("receive number of seats");
-		else puts("Error: recived invalid seats num");
+		else puts("Error: received invalid seats num");
 
 	}
 		
@@ -69,17 +66,22 @@ void reservation(int sd) {
 	struct seat seats[seats_num];
 	res = read(sd,seats,sizeof(seats),0);
 
-	if(res < sizeof(seats)){
+	if(res < sizeof(seats)) {
 
 		if(res == -1)perror("receive seats");
 		else puts("Error: mismatch of seats number recived");
-
 	
 	}
+	
+	//print the seats, yet another error check
 	int i;
 	for (i = 0; i < seats_num; i++ ) {
 		printf("%u,%u\n",seats[i].row,seats[i].col);
 	}
+	
+	occupy_seats(seats_num,seats);
+	
+	
 }
 
 
@@ -111,6 +113,7 @@ void show_seatsmap(int sd) {
 			write(sd,str_buff,1);
 		}
 	}
+
 	perform_action(sd);
 
 	
@@ -124,7 +127,6 @@ int listening_function() {
 	int ds_acc;
 	
 	struct sockaddr_in addr,inc;
-	struct incoming conn_data;
 
 	ds_sock = socket(AF_INET,SOCK_STREAM,0);
 	
@@ -222,15 +224,137 @@ void print_matrix() {
 	}
 }
 
-error_t parse_opt(int key,char* arg,struct argp_state * state) {
-	switch(key) {
-		case 'n':
-					//dosomething
-					printf("ciao\n");
+/*
+void load_reservation_array() {
+
+	int fd = open("./seats_res/reservations",O_CREAT | O_RDONLY,0660);
+	if (fd < 0) { perror("Open error during res loading"); }
+
+	res_list = (struct reservation * )calloc(info.raws*info.clmn,sizeof(struct reservation));
+	
+	int i = 0;
+	int j = 0;	
+	while(i < info.raws*info.clmn) {
+
+		if (read(fd,res_list[i].reservation_code,10) == -1) { perror("res_code"); }
+		printf("%s\n",res_list[i].reservation_code);
+		
+		if(read(fd,res_list[i].number_seats_reserved,sizeof(int)) == -1) { perror("numb_seats_res"); }
+		printf("%d\n",res_list[i].number_seats_reserved);
+
+		
+	}
+}*/
+
+int save_reservation_array(unsigned int arr_dim,unsigned int chiav_dim){
+	int res;
+	int des_f = open("./seats_res/reservations",O_CREAT | O_WRONLY,0660);
+	struct reservation * punt = res_list;
+	while(punt - res_list < arr_dim){
+		
+		//write s_num
+		res = write(des_f,&(punt->s_num),sizeof(punt->s_num));
+		if(res < sizeof(punt->s_num)){
+			if(res == -1)
+				perror("writing s_num on file");
+			else
+				puts("error: writing s_num on file");
+			return(-1);
+		}
+		
+		if(punt->s_num != 0){
+				
+			//write resevation_code
+			res = write(des_f,punt->reservation_code,chiav_dim+1);
+			if(res < chiav_dim+1){
+				if(res == -1)
+					perror("writing chiavazione on file");
+				else
+					puts("error: writing chiavazione on file");
+			return(-1);
+			}
+		
+			//write the seats array
+			res = write(des_f,punt->seats,(punt->s_num)*(sizeof(struct seat)));
+			if(res < (punt->s_num)*(sizeof(struct seat))){
+				if(res == -1)
+					perror("writing seats on file");
+				else
+					puts("error: writing seats on file");
+				return(-1);
+			}
+		}
+		
+		punt++;
 	}
 	return 0;
 }
 
+//gotta check if the control s_num != 0 gives error or not
+
+
+int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
+	int res;
+	int des_f = open("./seats_res/reservations",O_CREAT | O_RDONLY,0660);
+	struct reservation * punt = res_list;
+	while(punt - res_list < arr_dim){
+		
+		//read s_num
+		res = read(des_f,&(punt->s_num),sizeof(punt->s_num));
+		if(res < sizeof(punt->s_num)){
+			if(res == -1)
+				perror("reading s_num from file");
+			else
+				puts("error: reading s_num from file");
+		return(-1);
+		}
+		
+		if(punt->s_num != 0){
+			
+			punt->reservation_code = malloc(chiav_dim+1);
+			if(punt->reservation_code == NULL){perror("error in malloc load_reservation_array");return(-1);}
+						
+			res = read(des_f,punt->reservation_code,chiav_dim+1);
+			if(res < chiav_dim+1){
+				if(res == -1)
+					perror("reading chiavazione from file");
+				else
+					puts("error: reading chiavazione from file");
+			return(-1);
+			}
+		
+			//read seats arr
+			punt->seats = malloc((punt->s_num)*(sizeof(struct seat)));
+			if(punt->seats == NULL){perror("error in malloc load_reservation_array");return(-1);}
+			
+			res = read(des_f,punt->seats,(punt->s_num)*(sizeof(struct seat)));
+			if(res < (punt->s_num)*(sizeof(struct seat))){
+				if(res == -1)
+					perror("reading seats from file");
+				else
+					puts("error: reading seats from file");
+				return(-1);
+			}
+			
+			//refill matrix
+			//occupy_seats(punt->s_num,punt->seats);
+		}
+		punt++;	
+	}
+	return 0;
+}
+
+void occupy_seats(unsigned int num, struct seat * seats_occ) {
+	char (*matrix)[info.clmn] =(char (*)[info.clmn]) info.matrix;
+	struct seat * punt = seats_occ;
+	while( (punt - seats_occ) < num ) {
+
+		//if(matrix[punt->row][punt->col] == 1) { puts("found seats already occupied"); exit(-1); }
+		matrix[punt->row][punt->col] = 'O';
+		punt++;
+
+	}
+}
 
 int main(int argc, char **argv) {
 	
