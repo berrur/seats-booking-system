@@ -145,6 +145,12 @@ void show_seatsmap() {
 	return;
 }
 
+void delete_reservation() {
+	char key[15];	
+	fgets(key,10,stdin);
+	write(socket_descriptor,key,10);
+}
+
 void print_map(char * mbuffer) {
 
 	int i,j;
@@ -184,10 +190,12 @@ void action_chooser() {
 			seats_reservation();
 		}
 		else if (strcmp(option,"-D\n")==0) {
-			//deleting reservation
+			write(socket_descriptor,option,10);
+			delete_reservation();		
 		}
 		else if (strcmp(option,"-E\n")==0) {
-			//exit procedure
+			close(socket_descriptor);
+			exit(1);
 		}
 		else {
 			printf("Error: use -R -S -D -E\n");	

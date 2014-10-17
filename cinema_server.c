@@ -45,13 +45,17 @@ struct seat {
 struct server_data info;
 struct reservation * res_list;
 
-
+//void methods
+void check_res_status();
 void print_matrix();
-void occupy_seats(unsigned int s_num,struct seat * seats_occ);
 void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
+void release_seats(unsigned int s_num,struct seat * seats_occ);
+void occupy_seats(unsigned int s_num,struct seat * seats_occ);
+//int methods
 int seats_available(unsigned int num, struct seat * seats);
-
+//char * methods
 char * get_reservation_code();
+
 
 
 void reservation(int sd) {
@@ -136,6 +140,30 @@ char * get_reservation_code() {
 
 }
 
+void delete_reservation(int sd) {
+	char client_key[10];
+	if (read(sd,client_key,11) == -1 ) { perror("client_key read error"); }
+	
+	perform_delete(client_key);
+	save_reservation_array(info.raws*info.clmn,info.key_length);
+	//write(sd,"DEL_CONFIRMED",20);
+}
+
+int perform_delete(char * ck) {
+	struct reservation * punt = res_list;
+	while (punt - res_list < info.raws*info.clmn) {
+	
+		if (strcmp(punt->reservation_code,ck) == 0) {
+			release_seats(punt->s_num,punt->seats);			
+			punt->s_num = 0;
+			free(punt->seats);
+			free(punt->reservation_code);
+			return 1;
+		}
+		punt++;
+	}	
+}
+
 
 void show_seatsmap(int sd) {
 	
@@ -196,10 +224,7 @@ int listening_function() {
 		while((ds_acc = accept(ds_sock,(struct sockaddr *)&inc, &length_inc))==-1 );
 			printf(">>Connected to socket %d \n",ds_acc);
 			perform_action(ds_acc);
-			int i = 0;	
-			for(i = 0; i < info.raws*info.clmn; i++) {
-				printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
-			}
+			check_res_status();
 	}
 }
 
@@ -215,7 +240,7 @@ int perform_action(int sock_descriptor) {
 		reservation(sock_descriptor);
 	}
 	if (strcmp(option,"-D\n")==0) {
-		//deleting reservation
+		delete_reservation(sock_descriptor);
 	}
 	if (strcmp(option,"-E\n")==0) {
 		//exit procedure
@@ -389,10 +414,17 @@ void occupy_seats(unsigned int num, struct seat * seats_occ) {
 	char (*matrix)[info.clmn] =(char (*)[info.clmn]) info.matrix;
 	struct seat * punt = seats_occ;
 	while( (punt - seats_occ) < num ) {
-
 		matrix[punt->row][punt->col] = 'O';
 		punt++;
+	}
+}
 
+void release_seats(unsigned int num, struct seat * seats_occ) {
+	char (*matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;
+	struct seat * punt = seats_occ;
+	while(punt - seats_occ < num ) {
+		matrix[punt->row][punt->col] = 'X';
+		punt++;
 	}
 }
 
@@ -407,17 +439,16 @@ int seats_available(unsigned int num, struct seat * seats) {
 	return 1;
 }
 
-int reservation_list_init() {
-	
+int reservation_list_init() {	
 	struct reservation * posti_occupati =(struct reservation *)malloc(info.raws*info.clmn*sizeof(struct reservation ));
 	res_list = posti_occupati;
-
 }
 
 void check_res_status() {
 	int i = 0;	
 	for(i = 0; i < info.raws*info.clmn; i++) {
-		printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
+		if (res_list[i].reservation_code == NULL ) {}
+		else { printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num); }
 	}
 }
 
@@ -445,7 +476,7 @@ int main(int argc, char **argv) {
 	//sets a seed based on time
 	init_rand_generator();
 
-	create_map(2,2);
+	create_map(6,6);
 
 	matrix_init();
 	
