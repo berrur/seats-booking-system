@@ -25,7 +25,7 @@ struct seat{
 *
 */
 
-void action_chooser(int sd);
+void action_chooser();
 void show_seatsmap();
 void print_map(char * mbuffer);
 void seats_reservation();
@@ -65,7 +65,7 @@ void seats_reservation() {
 		do {
 			printf("Insert rows and columns for seats[%d]: ",i);
 			fflush(stdout);
-			fgets(line,100,stdin);
+			fgets(line,100,stdin);	
 			res = sscanf(line,"%u %u",&seats[i].row,&seats[i].col);
 		} while(res<2);
 		i++;
@@ -78,7 +78,8 @@ void seats_reservation() {
 	//sends the coordinates of the seats you have chosen
 	res = write(socket_descriptor,seats,sizeof(seats));
 	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(-1); }
-
+	
+	action_chooser();
 }
 
 
@@ -138,7 +139,7 @@ void print_map(char * mbuffer) {
 
 }
 
-void action_chooser(int sd) {
+void action_chooser() {
 	char option[10];
 
 	printf("=========================================\n");
@@ -154,11 +155,11 @@ void action_chooser(int sd) {
 	do {
 	
 		if (strcmp(option,"-S\n")==0) {
-			write(sd,option,10);
+			write(socket_descriptor,option,10);
 			show_seatsmap();
 		}
 		else if (strcmp(option,"-R\n")==0) {
-			write(sd,option,10);
+			write(socket_descriptor,option,10);
 			seats_reservation();
 		}
 		else if (strcmp(option,"-D\n")==0) {
@@ -191,7 +192,7 @@ int connect_function() {
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	inet_aton(ip,&addr.sin_addr);
+	inet_aton(ip,&addr.sin_addr);	
 
 	length_addr = sizeof(addr);
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
