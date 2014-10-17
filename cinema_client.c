@@ -11,8 +11,8 @@
 #define RES_DIM 20
 
 int socket_descriptor;
-int cinema_raws;
-int cinema_clmn;
+unsigned int cinema_raws;
+unsigned int cinema_clmn;
 
 struct seat{
 	unsigned int row;
@@ -30,6 +30,7 @@ void show_seatsmap();
 void print_map(char * mbuffer);
 void seats_reservation();
 int connect_function();
+int checK_constrains(unsigned int a, unsigned int b);
 
 /*
 *	
@@ -44,6 +45,7 @@ void seats_reservation() {
 
 	int res;
 	char line[100];
+	char res_key[11];
 	unsigned int seats_num;
 
 	//loop until sscanf return 0;	
@@ -59,14 +61,13 @@ void seats_reservation() {
 	struct seat seats[seats_num];
 	
 	int i = 0;
-	
 	//loop until sscanf returns one or less value
 	while (i < seats_num) {
 		do {
-			printf("Insert rows and columns for seats[%d]: ",i);
-			fflush(stdout);
-			fgets(line,100,stdin);	
-			res = sscanf(line,"%u %u",&seats[i].row,&seats[i].col);
+				printf("Insert rows and columns for seats[%d]: ",i);
+				fflush(stdout);
+				fgets(line,100,stdin);
+				res = sscanf(line,"%u %u",&seats[i].row,&seats[i].col);
 		} while(res<2);
 		i++;
 	}
@@ -79,9 +80,29 @@ void seats_reservation() {
 	res = write(socket_descriptor,seats,sizeof(seats));
 	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(-1); }
 	
-	action_chooser();
-}
+	if(read(socket_descriptor,line,10) == -1 ) { perror("error reading response"); }
+	
+	if (strcmp(line,"RES_OK") == 0) {
+	
+		if( read(socket_descriptor,line,11) == -1 ) { perror("error reading reservation key"); }
+		printf(" -----------------------------------------------------\n");			
+		printf("|Your reservation code is %s, don't forget it |\n",line);
+		printf(" -----------------------------------------------------\n");
+		
+		close(socket_descriptor);
+		exit(1);
 
+	} else {	
+
+		printf("---------------------------------------\n");
+		printf("|A seat you choose is already reserved|\n");
+		printf("|       or it's out of bound!         |\n");		
+		printf("---------------------------------------\n");		
+		close(socket_descriptor);
+		exit(1);
+
+	}
+}
 
 void show_seatsmap() {
 	int i,j;

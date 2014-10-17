@@ -7,6 +7,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <argp.h> 
+#include <time.h>
 
 
 #define BACKLOG 10
@@ -48,7 +49,10 @@ struct reservation * res_list;
 void print_matrix();
 void occupy_seats(unsigned int s_num,struct seat * seats_occ);
 void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
+int seats_available(unsigned int num, struct seat * seats);
+
 char * get_reservation_code();
+
 
 void reservation(int sd) {
 	
@@ -70,11 +74,19 @@ void reservation(int sd) {
 		if(res == -1)perror("receive seats");
 		else puts("Error: mismatch of seats number recived");
 	}
+
+	if (seats_available(seats_num,seats_temp) == 0 ) {  char msg[10] = "RES_ERR"; write(sd,msg,10); close(sd); }
+	else {
+
+		char msg[10] = "RES_OK";
+		write(sd,msg,10);
 	
-	struct reservation * r_entry;	
-	perform_reservation(seats_num,seats_temp,&r_entry);
-	save_reservation_array(info.raws*info.clmn,info.key_length);
+		struct reservation * r_entry;	
+		perform_reservation(seats_num,seats_temp,&r_entry);
+		save_reservation_array(info.raws*info.clmn,info.key_length);
+		write(sd,r_entry->reservation_code,info.key_length+1);
 	
+	}	
 }
 
 void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry) {
@@ -332,8 +344,8 @@ int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
 		if(res < sizeof(punt->s_num)){
 			if(res == -1)
 				perror("reading s_num from file");
-			else
-				puts("error: reading s_num from file");
+			/*else
+				puts("error: reading s_num from file");*/
 		return(-1);
 		}
 		
@@ -384,6 +396,17 @@ void occupy_seats(unsigned int num, struct seat * seats_occ) {
 	}
 }
 
+int seats_available(unsigned int num, struct seat * seats) {
+	char (*matrix)[info.clmn] =(char (*)[info.clmn]) info.matrix;
+	struct seat * punt = seats;
+	while( (punt-seats) < num ){
+		if( matrix[punt->row][punt->col] != 'X')
+			return 0;
+		punt++;
+	}
+	return 1;
+}
+
 int reservation_list_init() {
 	
 	struct reservation * posti_occupati =(struct reservation *)malloc(info.raws*info.clmn*sizeof(struct reservation ));
@@ -391,6 +414,16 @@ int reservation_list_init() {
 
 }
 
+void check_res_status() {
+	int i = 0;	
+	for(i = 0; i < info.raws*info.clmn; i++) {
+		printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
+	}
+}
+
+void init_rand_generator() {
+	srand(time(NULL));
+}
 
 int main(int argc, char **argv) {
 	
@@ -407,17 +440,23 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGHUP,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
-	*/	
+	*/
+
+	//sets a seed based on time
+	init_rand_generator();
+
 	create_map(2,2);
+
 	matrix_init();
+	
+	//load the last seats configuration
 	reservation_list_init();
+
 	info.key_length = 10;
 	load_reservation_array(info.raws*info.clmn,info.key_length);
 	
-	int i = 0;	
-	for(i = 0; i < info.raws*info.clmn; i++) {
-		printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
-	}
+	//check the reservation array status
+	check_res_status();
 	
 	listening_function();
 
