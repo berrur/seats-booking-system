@@ -146,9 +146,17 @@ void show_seatsmap() {
 }
 
 void delete_reservation() {
-	char key[15];	
-	fgets(key,10,stdin);
-	write(socket_descriptor,key,10);
+	char key[11];	
+	printf("Insert your reservation code\n");
+	fgets(key,11,stdin);
+	key[11] = '\0';
+	if(write(socket_descriptor,key,20) == -1) { perror("Write error in delete_reservation"); }
+	if(read(socket_descriptor,key,20) == -1) { perror("Write error in delete_reservation"); }
+	if(strcmp(key,"DEL_CONFIRMED") == 0 ) {
+		printf("Cancellazione avvenuta con successo!\n");
+	}
+	close(socket_descriptor);
+	exit(1);
 }
 
 void print_map(char * mbuffer) {

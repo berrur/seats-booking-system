@@ -141,22 +141,26 @@ char * get_reservation_code() {
 }
 
 void delete_reservation(int sd) {
-	char client_key[10];
+	char client_key[30];
 	if (read(sd,client_key,11) == -1 ) { perror("client_key read error"); }
-	
+	printf("1, %s asd\n",client_key);
 	perform_delete(client_key);
+		printf("2\n");
 	save_reservation_array(info.raws*info.clmn,info.key_length);
-	//write(sd,"DEL_CONFIRMED",20);
+		printf("3\n");	
+	write(sd,"DEL_CONFIRMED",20);
 }
 
 int perform_delete(char * ck) {
 	struct reservation * punt = res_list;
 	while (punt - res_list < info.raws*info.clmn) {
-	
 		if (strcmp(punt->reservation_code,ck) == 0) {
+			printf("1.2\n");
 			release_seats(punt->s_num,punt->seats);			
+			printf("1.3\n");			
 			punt->s_num = 0;
 			free(punt->seats);
+			printf("1.4\n");
 			free(punt->reservation_code);
 			return 1;
 		}
@@ -447,8 +451,8 @@ int reservation_list_init() {
 void check_res_status() {
 	int i = 0;	
 	for(i = 0; i < info.raws*info.clmn; i++) {
-		if (res_list[i].reservation_code == NULL ) {}
-		else { printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num); }
+		if (res_list[i].s_num == 0 ) {}
+		else { printf("key: %s, seats reserved %d\n",res_list[i].reservation_code,res_list[i].s_num); }
 	}
 }
 
