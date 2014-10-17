@@ -32,8 +32,8 @@ struct incoming {
 }
 */	
 struct reservation { 				//entry of a collection of reservations
-	char * reservation_code;		//unique code generated for a single reservation
 	unsigned int s_num;				//number of seats reserved for a single reservation
+	char * reservation_code;		//unique code generated for a single reservation
 	struct seat * seats; 			//array of reserved seats;	
 };
 struct seat {
@@ -47,7 +47,7 @@ struct reservation * res_list;
 
 void print_matrix();
 void occupy_seats(unsigned int s_num,struct seat * seats_occ);
-void perform_reservation(unsigned int seats_num,struct seat * seats_occ);
+void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
 char * get_reservation_code();
 
 void reservation(int sd) {
@@ -57,60 +57,52 @@ void reservation(int sd) {
 	
 	res = read(sd,&seats_num,sizeof(seats_num));
 	
+	//receive seats number
 	if(res < sizeof(seats_num)){
-
 		if(res == -1)perror("receive number of seats");
 		else puts("Error: received invalid seats num");
-
 	}
 		
 	//receive seats
 	struct seat seats_temp[seats_num];
 	res = read(sd,seats_temp,sizeof(seats_temp));
-
 	if(res < sizeof(seats_temp)) {
-
 		if(res == -1)perror("receive seats");
 		else puts("Error: mismatch of seats number recived");
-	
 	}
 	
-	perform_reservation(seats_num,seats_temp);
-	occupy_seats(seats_num,seats_temp);
+	struct reservation * r_entry;	
+	perform_reservation(seats_num,seats_temp,&r_entry);
 	save_reservation_array(info.raws*info.clmn,info.key_length);
 	
 }
 
-void perform_reservation(unsigned int seats_num,struct seat * seats_occ) {
+void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry) {
+	
+	occupy_seats(seats_num,seats_occ);	
 	
 	int i;
-	struct reservation * new_entry;
-	struct reservation * punt = res_list;
-	
 	for(i = 0; i < info.raws*info.clmn; i++) {
 
-		if (res_list[i].s_num == 0) { 
+		if (res_list[i].s_num == 0)
 			break;
-		}
-		i++;
+
 	}
+	struct reservation * new_entry = res_list + i;
 	
+	//save seats_num into new entry
 	new_entry->s_num = seats_num;
-	//new_entry->seats = *seats_occ;
-	
+		
+	//copy the seat buffer into the new entry	
 	void * seats_temp = calloc(seats_num,sizeof(struct seat));
 	if (seats_temp == NULL ) { perror("Calloc error in perform reservation!"); }
 	
 	new_entry->seats = memcpy(seats_temp,seats_occ,sizeof(struct seat)*seats_num);
-	
-
-	char * res_code = get_reservation_code();
-		
-	new_entry->reservation_code = res_code; 
-	punt = (punt + i*sizeof(struct reservation *));	
-	*punt = new_entry;
+	new_entry->reservation_code = get_reservation_code(); 
+				
+	*r_entry = new_entry;
 	printf("%u,%s\n",res_list[i].s_num,res_list[i].reservation_code);
-		
+	
 }
 
 char * get_reservation_code() {
@@ -192,6 +184,10 @@ int listening_function() {
 		while((ds_acc = accept(ds_sock,(struct sockaddr *)&inc, &length_inc))==-1 );
 			printf(">>Connected to socket %d \n",ds_acc);
 			perform_action(ds_acc);
+			int i = 0;	
+			for(i = 0; i < info.raws*info.clmn; i++) {
+				printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
+			}
 	}
 }
 
@@ -326,7 +322,7 @@ int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
 	
 	int res;
 	int des_f;
-	des_f = open("./seats_res/reservations", O_RDONLY | O_CREAT,0660);					
+	des_f = open("./seats_res/reservations", O_RDONLY | O_CREAT, 0660);					
 	
 	struct reservation * punt = res_list;
 	while(punt - res_list < arr_dim){
@@ -388,6 +384,13 @@ void occupy_seats(unsigned int num, struct seat * seats_occ) {
 	}
 }
 
+int reservation_list_init() {
+	
+	struct reservation * posti_occupati =(struct reservation *)malloc(info.raws*info.clmn*sizeof(struct reservation ));
+	res_list = posti_occupati;
+
+}
+
 
 int main(int argc, char **argv) {
 	
@@ -406,15 +409,16 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	*/	
 	create_map(2,2);
-	struct reservation * posti_occupati =(struct reservation *)malloc(info.raws*info.clmn*sizeof(struct reservation ));
-	res_list = posti_occupati;
 	matrix_init();
+	reservation_list_init();
 	info.key_length = 10;
 	load_reservation_array(info.raws*info.clmn,info.key_length);
+	
 	int i = 0;	
 	for(i = 0; i < info.raws*info.clmn; i++) {
-		printf("chiavi presenti: %s\n",res_list[i].reservation_code);
+		printf("chiave presente: %s, posti occupati %d\n",res_list[i].reservation_code,res_list[i].s_num);
 	}
+	
 	listening_function();
 
 }
