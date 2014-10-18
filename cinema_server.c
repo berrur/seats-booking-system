@@ -140,32 +140,39 @@ char * get_reservation_code() {
 
 }
 
-void delete_reservation(int sd) {
+int delete_reservation(int sd) {
 	char client_key[30];
 	if (read(sd,client_key,11) == -1 ) { perror("client_key read error"); }
-	printf("1, %s asd\n",client_key);
-	perform_delete(client_key);
-		printf("2\n");
-	save_reservation_array(info.raws*info.clmn,info.key_length);
-		printf("3\n");	
-	write(sd,"DEL_CONFIRMED",20);
+	if (perform_delete(client_key) == 0) { 
+		printf("non entra\n");
+		write(sd,"WRONG_KEY",20);
+		close(sd);
+		return 0;
+	}else {
+		save_reservation_array(info.raws*info.clmn,info.key_length);
+		write(sd,"DEL_CONFIRMED",20);
+		return 1;
+	}
 }
 
 int perform_delete(char * ck) {
 	struct reservation * punt = res_list;
-	while (punt - res_list < info.raws*info.clmn) {
-		if (strcmp(punt->reservation_code,ck) == 0) {
-			printf("1.2\n");
-			release_seats(punt->s_num,punt->seats);			
-			printf("1.3\n");			
-			punt->s_num = 0;
-			free(punt->seats);
-			printf("1.4\n");
-			free(punt->reservation_code);
-			return 1;
+	unsigned int dim_array = info.raws*info.clmn;
+	while ( punt-res_list < dim_array ) {
+		if(punt->s_num == 0 ) { punt++; }
+		else {
+			if (strcmp(punt->reservation_code,ck) == 0) {
+				release_seats(punt->s_num,punt->seats);			
+				punt->s_num = 0;
+				free(punt->reservation_code);
+				free(punt->seats);
+				return 1;
+			} else {
+				punt++;
+			}
 		}
-		punt++;
-	}	
+	}
+	return 0;	
 }
 
 

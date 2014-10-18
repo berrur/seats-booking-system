@@ -151,9 +151,11 @@ void delete_reservation() {
 	fgets(key,11,stdin);
 	key[11] = '\0';
 	if(write(socket_descriptor,key,20) == -1) { perror("Write error in delete_reservation"); }
-	if(read(socket_descriptor,key,20) == -1) { perror("Write error in delete_reservation"); }
+	if(read(socket_descriptor,key,20) == -1) { perror("Read error in delete_reservation"); }
 	if(strcmp(key,"DEL_CONFIRMED") == 0 ) {
-		printf("Cancellazione avvenuta con successo!\n");
+		printf("Your reservation has been deleted succesfully!\n");
+	} else {
+		printf("Something has gone wrong, please try again!\n");
 	}
 	close(socket_descriptor);
 	exit(1);
