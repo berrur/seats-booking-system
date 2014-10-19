@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <argp.h> 
 #include <time.h>
+#include <signal.h>
 
 
 #define BACKLOG 10
@@ -177,7 +178,6 @@ int perform_delete(char * ck) {
 
 
 void show_seatsmap(int sd) {
-	
 	char mat_raws[3];
 	char mat_clmns[3];
 	char option[10];
@@ -205,15 +205,13 @@ void show_seatsmap(int sd) {
 		}
 	}
 
-	perform_action(sd);
-
-	
+	perform_action(sd);	
 }
 
 
 int listening_function() {
 	int ds_sock;
-	int port = 4444;
+	int port = 4445;
 	int length_inc;
 	int ds_acc;
 	
@@ -467,11 +465,15 @@ void init_rand_generator() {
 	srand(time(NULL));
 }
 
+void close_routine() {
+	exit(1);	
+}
+
 int main(int argc, char **argv) {
 	
-	/*	i'm going to implement this later
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
+	
 	struct sigaction sig_act;
 	sig_act.sa_handler = close_routine;
 	sig_act.sa_mask = set;
@@ -482,9 +484,8 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGHUP,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
-	*/
 
-	//sets a seed based on time
+	//initialize the random code generator
 	init_rand_generator();
 
 	create_map(6,6);
