@@ -208,6 +208,7 @@ void show_seatsmap(int sd) {
 
 
 int listening_function() {
+	
 	int ds_sock;
 	int port = 4444;
 	int length_inc;
@@ -248,9 +249,6 @@ int perform_action(int sock_descriptor) {
 	}
 	if (strcmp(option,"-D\n")==0) {
 		delete_reservation(sock_descriptor);
-	}
-	if (strcmp(option,"-E\n")==0) {
-		close(sock_descriptor);
 	}
 	close(sock_descriptor);
 }
@@ -359,8 +357,6 @@ int save_reservation_array(unsigned int arr_dim,unsigned int chiav_dim){
 	}
 	return 0;
 }
-
-//gotta check if the control s_num != 0 gives error or not
 
 
 int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){

@@ -28,7 +28,7 @@ void show_seatsmap(char * option);
 void print_map(char * mbuffer, unsigned int cinema_raws, unsigned int cinema_clmn);
 void seats_reservation(char * option);
 int connect_function();
-int checK_constrains(unsigned int a, unsigned int b);
+int check_constrains(unsigned int a, unsigned int b);
 
 /*
 *	
@@ -36,6 +36,20 @@ int checK_constrains(unsigned int a, unsigned int b);
 *	saves it into a matrix,
 *
 */
+
+//Check if the seats the client selected previously have doubles
+int no_double_seats(struct seat * seats,unsigned int seats_num) {
+	int i,j;
+	for ( i = 0; i < seats_num; i++ ) {		
+		for ( j = 0; j < seats_num; j++ ) {
+			if (i == j ) {}
+			else if (seats[j].row == seats[i].row && seats[j].col == seats[i].col ) {
+				return -1;
+			}
+		}
+	}
+	return 1;
+}
 
 void seats_reservation(char * option) {
 
@@ -57,6 +71,7 @@ void seats_reservation(char * option) {
 	struct seat seats[seats_num];
 	
 	int i = 0;
+
 	//loop until sscanf returns one or less value
 	while (i < seats_num) {
 		do {
@@ -67,10 +82,13 @@ void seats_reservation(char * option) {
 		} while(res<2);
 		i++;
 	}
-
+	
+	//useful check
+	if (no_double_seats(seats,seats_num) == -1 ) { printf("You choose a seat twice!\n"); exit(1); }
+	
 	connect_function();		
 	write(socket_descriptor,option,10);
-	
+
 	//send the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
 	if(res == -1){ perror("reservation send error"); exit(-1); }
