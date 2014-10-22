@@ -64,9 +64,9 @@ void reservation(int sd) {
 	int res;
 	unsigned int seats_num = 0;
 	
-	res = read(sd,&seats_num,sizeof(seats_num));
 	
 	//receive seats number
+	res = read(sd,&seats_num,sizeof(seats_num));
 	if(res < sizeof(seats_num)){
 		if(res == -1)perror("receive number of seats");
 		else puts("Error: received invalid seats num");
@@ -203,15 +203,13 @@ void show_seatsmap(int sd) {
 			sprintf(str_buff,"%c",temp_matrix[i][j]);
 			write(sd,str_buff,1);
 		}
-	}
-
-	perform_action(sd);	
+	}	
 }
 
 
 int listening_function() {
 	int ds_sock;
-	int port = 4445;
+	int port = 4444;
 	int length_inc;
 	int ds_acc;
 	
@@ -240,7 +238,7 @@ int listening_function() {
 int perform_action(int sock_descriptor) {
 	char option[10];
 
-	if(read(sock_descriptor,option,10)==-1) {perror("Reading error init_connection");}
+	if(read(sock_descriptor,option,10)==-1) { perror("Reading error init_connection"); }
 
 	if (strcmp(option,"-S\n")==0) {
 		show_seatsmap(sock_descriptor);
@@ -252,8 +250,9 @@ int perform_action(int sock_descriptor) {
 		delete_reservation(sock_descriptor);
 	}
 	if (strcmp(option,"-E\n")==0) {
-		//exit procedure
+		close(sock_descriptor);
 	}
+	close(sock_descriptor);
 }
 
 int create_map(int raws,int columns) {

@@ -11,8 +11,6 @@
 #define RES_DIM 20
 
 int socket_descriptor;
-unsigned int cinema_raws;
-unsigned int cinema_clmn;
 
 struct seat{
 	unsigned int row;
@@ -26,9 +24,9 @@ struct seat{
 */
 
 void action_chooser();
-void show_seatsmap();
-void print_map(char * mbuffer);
-void seats_reservation();
+void show_seatsmap(char * option);
+void print_map(char * mbuffer, unsigned int cinema_raws, unsigned int cinema_clmn);
+void seats_reservation(char * option);
 int connect_function();
 int checK_constrains(unsigned int a, unsigned int b);
 
@@ -39,9 +37,7 @@ int checK_constrains(unsigned int a, unsigned int b);
 *
 */
 
-
-
-void seats_reservation() {
+void seats_reservation(char * option) {
 
 	int res;
 	char line[100];
@@ -72,6 +68,9 @@ void seats_reservation() {
 		i++;
 	}
 
+	connect_function();		
+	write(socket_descriptor,option,10);
+	
 	//send the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
 	if(res == -1){ perror("reservation send error"); exit(-1); }
@@ -104,15 +103,18 @@ void seats_reservation() {
 	}
 }
 
-void show_seatsmap() {
+void show_seatsmap(char * option) {
 	int i,j;
 	
-	char action[4];
+	unsigned int cinema_raws;
+	unsigned int cinema_clmn;
 	char temp_read[1];
 	char temp[10];
 	char * endptr;
 	char * mbuffer;
-	char * check = "CHECK_OK";
+	
+	connect_function();
+	write(socket_descriptor,option,10);
 
 	read(socket_descriptor,temp,3);
 	cinema_raws = strtol(temp,&endptr,10);
@@ -137,19 +139,21 @@ void show_seatsmap() {
 	printf("---------------------------------\n");
 	printf("There are overall %d seats\n",(int)size);
 	printf("---------------------------------\n");
-	print_map(mbuffer);	
+	print_map(mbuffer,cinema_raws,cinema_clmn);	
 	printf("---------------------------------\n");
-
-	printf("Insert -E to terminate this session\n");
-	printf("Or insert -R to book a seats\n");
-	return;
+	close(socket_descriptor);
+	exit(1);
 }
 
-void delete_reservation() {
+void delete_reservation(char * option) {
 	char key[11];	
 	printf("Insert your reservation code\n");
 	fgets(key,11,stdin);
 	key[11] = '\0';
+	
+	connect_function();
+	write(socket_descriptor,option,10);
+
 	if(write(socket_descriptor,key,20) == -1) { perror("Write error in delete_reservation"); }
 	if(read(socket_descriptor,key,20) == -1) { perror("Read error in delete_reservation"); }
 	if(strcmp(key,"DEL_CONFIRMED") == 0 ) {
@@ -161,7 +165,7 @@ void delete_reservation() {
 	exit(1);
 }
 
-void print_map(char * mbuffer) {
+void print_map(char * mbuffer,unsigned int cinema_raws,unsigned int cinema_clmn) {
 
 	int i,j;
 	
@@ -180,7 +184,7 @@ void action_chooser() {
 	char option[10];
 
 	printf("=========================================\n");
-	printf("What to do?\n");
+	printf("What to do?\n\n");
 	printf("-S show the seats map.\n");
 	printf("-R reserve one or more seats.\n");
 	printf("-D cancel reservation.\n");
@@ -192,19 +196,15 @@ void action_chooser() {
 	do {
 	
 		if (strcmp(option,"-S\n")==0) {
-			write(socket_descriptor,option,10);
-			show_seatsmap();
+			show_seatsmap(option);
 		}
 		else if (strcmp(option,"-R\n")==0) {
-			write(socket_descriptor,option,10);
-			seats_reservation();
+			seats_reservation(option);
 		}
 		else if (strcmp(option,"-D\n")==0) {
-			write(socket_descriptor,option,10);
-			delete_reservation();		
+			delete_reservation(option);		
 		}
 		else if (strcmp(option,"-E\n")==0) {
-			close(socket_descriptor);
 			exit(1);
 		}
 		else {
@@ -221,9 +221,6 @@ int connect_function() {
 	int length_addr;	
 	int port = 4444;
 	char * ip = "127.0.0.1";
-	char msg[BUFFER];
-	char action[BUFFER];
-	char action_resp[RES_DIM];
 
 	struct sockaddr_in addr;
 	
@@ -236,11 +233,10 @@ int connect_function() {
 	length_addr = sizeof(addr);
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
 	printf("--Estabilished connection with the server--\n");
-		
 }
 
 int main() {
-	connect_function();
-	action_chooser(socket_descriptor);
+	//connect_function();
+	action_chooser();
 }
 
