@@ -64,7 +64,10 @@ void reservation(int sd) {
 	int res;
 	unsigned int seats_num = 0;
 	
-	
+	//sends cinema sizes
+	write(sd,&(info.raws),sizeof(unsigned int));	
+	write(sd,&(info.clmn),sizeof(unsigned int));	
+
 	//receive seats number
 	res = read(sd,&seats_num,sizeof(seats_num));
 	if(res < sizeof(seats_num)){
@@ -461,6 +464,7 @@ void init_rand_generator() {
 }
 
 void close_routine() {
+	save_reservation_array(info.raws*info.clmn,info.key_length);
 	exit(1);	
 }
 

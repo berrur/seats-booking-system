@@ -28,7 +28,7 @@ void show_seatsmap(char * option);
 void print_map(char * mbuffer, unsigned int cinema_raws, unsigned int cinema_clmn);
 void seats_reservation(char * option);
 int connect_function();
-int check_constrains(unsigned int a, unsigned int b);
+//int check_constrains(unsigned int a, unsigned int b);
 
 /*
 *	
@@ -51,12 +51,22 @@ int no_double_seats(struct seat * seats,unsigned int seats_num) {
 	return 1;
 }
 
+int check_constrains(unsigned int a,unsigned int b,unsigned int s_num, struct seat * arr) {
+	struct seat * punt = arr;
+	while( punt - arr < s_num ) {
+		if ( punt->row >= a || punt->col >= b ) {
+			return 0;	
+		}
+		punt++;	
+	}
+	return 1;
+}
+	
 void seats_reservation(char * option) {
-
 	int res;
 	char line[100];
 	char res_key[11];
-	unsigned int seats_num;
+	unsigned int seats_num,r,c;
 
 	//loop until sscanf return 0;	
 	do{
@@ -82,13 +92,20 @@ void seats_reservation(char * option) {
 		} while(res<2);
 		i++;
 	}
-	
-	//useful check
+	//useful check, high cost
 	if (no_double_seats(seats,seats_num) == -1 ) { printf("You choose a seat twice!\n"); exit(1); }
 	
 	connect_function();		
 	write(socket_descriptor,option,10);
-
+	
+	//receive cinema sizes
+	read(socket_descriptor,&r,sizeof(unsigned int));
+	read(socket_descriptor,&c,sizeof(unsigned int));
+	printf("%d e %d\n",r,c);
+	
+	//check bounds
+	if (check_constrains(r,c,seats_num,seats)==-1) { printf("Index out of bound!\n"); close(socket_descriptor); exit(1); }
+	
 	//send the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
 	if(res == -1){ perror("reservation send error"); exit(-1); }
@@ -112,8 +129,7 @@ void seats_reservation(char * option) {
 	} else {	
 
 		printf("---------------------------------------\n");
-		printf("|A seat you choose is already reserved|\n");
-		printf("|       or it's out of bound!         |\n");		
+		printf("|A seat you choose is already reserved|\n");		
 		printf("---------------------------------------\n");		
 		close(socket_descriptor);
 		exit(1);
@@ -249,7 +265,7 @@ int connect_function() {
 	inet_aton(ip,&addr.sin_addr);	
 
 	length_addr = sizeof(addr);
-	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) {perror("Connection Error"); exit(1); }
+	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) { perror("Connection Error"); exit(1); }
 	printf("--Estabilished connection with the server--\n");
 }
 
