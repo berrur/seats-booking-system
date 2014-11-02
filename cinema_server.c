@@ -465,7 +465,37 @@ void init_rand_generator() {
 
 void close_routine() {
 	save_reservation_array(info.raws*info.clmn,info.key_length);
-	exit(1);	
+	exit(0);	
+}
+
+error_t parse_opt (int key, char * arg, struct argp_state *state) {
+	
+	unsigned int temp = 0;
+	switch (key)
+		{
+			case 's': 
+				{				
+					unsigned int i;
+					for (i = 0; i < atoi (arg); i++)
+						printf (".");
+					printf ("\n"); 
+					break;
+				}
+			case ARGP_KEY_ARG:
+				switch (state->arg_num){
+					case 0:
+						temp = strtol(arg,NULL,10);
+						if(temp < 1)argp_failure(state,1,0,"ERROR \"%s\" is not a valid rows number\n",arg);
+						info.raws = temp;
+						break;
+					case 1:
+						temp = strtol(arg,NULL,10);
+						if(temp < 1)argp_failure(state,1,0,"ERROR \"%s\" is not a valid cols number\n",arg);
+						info.clmn = temp;
+						break;
+			}break;
+		}
+	return 0; 
 }
 
 int main(int argc, char **argv) {
@@ -483,6 +513,16 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGHUP,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
+
+	struct argp_option options[] =
+		{
+			{ "seats", 's', "NUM", 0, "Show a dot on the screen"},
+			{ 0 }
+		};
+	struct argp argp = { options, parse_opt, "raws columns" };
+	argp_parse(&argp,argc,argv,0,0,0); 
+
+
 
 	//initialize the random code generator
 	init_rand_generator();
