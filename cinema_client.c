@@ -166,7 +166,7 @@ void show_seatsmap(char * option) {
 	print_map(mbuffer,cinema_raws,cinema_clmn);	
 	printf("---------------------------------\n");
 	close(socket_descriptor);
-	exit(1);
+	exit(0);
 }
 
 void delete_reservation(char * option) {
@@ -186,7 +186,7 @@ void delete_reservation(char * option) {
 		printf("Something has gone wrong, please try again!\n");
 	}
 	close(socket_descriptor);
-	exit(1);
+	exit(0);
 }
 
 void print_map(char * mbuffer,unsigned int cinema_raws,unsigned int cinema_clmn) {
@@ -260,7 +260,6 @@ int connect_function() {
 }
 
 int main() {
-	//connect_function();
 	action_chooser();
 }
 

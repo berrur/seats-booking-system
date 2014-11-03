@@ -464,36 +464,6 @@ void close_routine() {
 	exit(0);	
 }
 
-error_t parse_opt (int key, char * arg, struct argp_state *state) {
-	
-	unsigned int temp = 0;
-	switch (key)
-		{
-			case 's': 
-				{				
-					unsigned int i;
-					for (i = 0; i < atoi (arg); i++)
-						printf (".");
-					printf ("\n"); 
-					break;
-				}
-			case ARGP_KEY_ARG:
-				switch (state->arg_num){
-					case 0:
-						temp = strtol(arg,NULL,10);
-						if(temp < 1)argp_failure(state,1,0,"ERROR \"%s\" is not a valid rows number\n",arg);
-						info.rows = temp;
-						break;
-					case 1:
-						temp = strtol(arg,NULL,10);
-						if(temp < 1)argp_failure(state,1,0,"ERROR \"%s\" is not a valid cols number\n",arg);
-						info.clmn = temp;
-						break;
-			}break;
-		}
-	return 0; 
-}
-
 int new_map(char * row, char * clmn ) {
 	printf("The new cinema has %s rows and %s columns\n",row,clmn);
 	unsigned int r = strtol(row,NULL,10);
@@ -519,6 +489,7 @@ int previous_map() {
 
 int main(int argc, char **argv) {
 	
+	// signal management
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
 	
