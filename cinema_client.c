@@ -92,30 +92,19 @@ void seats_reservation(char * option) {
 		} while(res<2);
 		i++;
 	}
-	//useful check, high cost
-	if (no_double_seats(seats,seats_num) == -1 ) { printf("You choose a seat twice!\n"); exit(1); }
 	
 	connect_function();		
 	write(socket_descriptor,option,10);
-	
-	//receive cinema sizes
-	read(socket_descriptor,&r,sizeof(unsigned int));
-	read(socket_descriptor,&c,sizeof(unsigned int));
-	printf("%d e %d\n",r,c);
-	
-	//check bounds
-	if (check_constrains(r,c,seats_num,seats)==-1) { printf("Index out of bound!\n"); close(socket_descriptor); exit(1); }
-	
-	//send the number of seats you want to book
+
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
 	if(res == -1){ perror("reservation send error"); exit(-1); }
 	
 	//sends the coordinates of the seats you have chosen
 	res = write(socket_descriptor,seats,sizeof(seats));
 	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(-1); }
-	
+		
 	if(read(socket_descriptor,line,10) == -1 ) { perror("error reading response"); }
-	
+			
 	if (strcmp(line,"RES_OK") == 0) {
 	
 		if( read(socket_descriptor,line,11) == -1 ) { perror("error reading reservation key"); }
@@ -129,7 +118,8 @@ void seats_reservation(char * option) {
 	} else {	
 
 		printf("---------------------------------------\n");
-		printf("|A seat you choose is already reserved|\n");		
+		printf("|	There has been some errors    |\n");
+		printf("| 	     please try again         |\n");	
 		printf("---------------------------------------\n");		
 		close(socket_descriptor);
 		exit(1);

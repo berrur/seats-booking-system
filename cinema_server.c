@@ -23,8 +23,8 @@
 
 struct server_data {
 	unsigned int key_length;
-	int raws;
-	int clmn;
+	unsigned int rows;
+	unsigned int clmn;
 	char * matrix;
 };
 /*
@@ -47,6 +47,7 @@ struct server_data info;
 struct reservation * res_list;
 
 //void methods
+void matrix_init();
 void check_res_status();
 void print_matrix();
 void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
@@ -57,16 +58,34 @@ int seats_available(unsigned int num, struct seat * seats);
 //char * methods
 char * get_reservation_code();
 
+int no_double_seats(struct seat * seats,unsigned int seats_num) {
+	int i,j;
+	for ( i = 0; i < seats_num; i++ ) {		
+		for ( j = 0; j < seats_num; j++ ) {
+			if (i == j ) {}
+			else if (seats[j].row == seats[i].row && seats[j].col == seats[i].col ) {
+				return -1;
+			}
+		}
+	}
+	return 1;
+}
 
+int check_constrains(unsigned int s_num, struct seat * arr) {
+	struct seat * punt = arr;
+	while( punt - arr < s_num ) {
+		if ( punt->row >= info.rows || punt->col >= info.clmn ) {
+			return -1;	
+		}
+		punt++;	
+	}
+	return 1;
+}
 
 void reservation(int sd) {
 	
 	int res;
 	unsigned int seats_num = 0;
-	
-	//sends cinema sizes
-	write(sd,&(info.raws),sizeof(unsigned int));	
-	write(sd,&(info.clmn),sizeof(unsigned int));	
 
 	//receive seats number
 	res = read(sd,&seats_num,sizeof(seats_num));
@@ -82,16 +101,17 @@ void reservation(int sd) {
 		if(res == -1)perror("receive seats");
 		else puts("Error: mismatch of seats number recived");
 	}
+	
+	if (no_double_seats(seats_temp,seats_num) == -1 ) { char msg[10] = "RES_ERR"; write(sd,msg,10); return; }	
+	if (check_constrains(seats_num,seats_temp) == -1) { char msg[10] = "RES_ERR"; write(sd,msg,10); return; }
 
-	if (seats_available(seats_num,seats_temp) == 0 ) {  char msg[10] = "RES_ERR"; write(sd,msg,10); close(sd); }
+	if (seats_available(seats_num,seats_temp) == 0 ) {  char msg[10] = "RES_ERR"; write(sd,msg,10); return; }
 	else {
-
 		char msg[10] = "RES_OK";
 		write(sd,msg,10);
-	
 		struct reservation * r_entry;	
 		perform_reservation(seats_num,seats_temp,&r_entry);
-		save_reservation_array(info.raws*info.clmn,info.key_length);
+		save_reservation_array(info.rows*info.clmn,info.key_length);
 		write(sd,r_entry->reservation_code,info.key_length+1);
 	
 	}	
@@ -102,7 +122,7 @@ void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct r
 	occupy_seats(seats_num,seats_occ);	
 	
 	int i;
-	for(i = 0; i < info.raws*info.clmn; i++) {
+	for(i = 0; i < info.rows*info.clmn; i++) {
 
 		if (res_list[i].s_num == 0)
 			break;
@@ -153,7 +173,7 @@ int delete_reservation(int sd) {
 		close(sd);
 		return 0;
 	}else {
-		save_reservation_array(info.raws*info.clmn,info.key_length);
+		save_reservation_array(info.rows*info.clmn,info.key_length);
 		write(sd,"DEL_CONFIRMED",20);
 		return 1;
 	}
@@ -161,7 +181,7 @@ int delete_reservation(int sd) {
 
 int perform_delete(char * ck) {
 	struct reservation * punt = res_list;
-	unsigned int dim_array = info.raws*info.clmn;
+	unsigned int dim_array = info.rows*info.clmn;
 	while ( punt-res_list < dim_array ) {
 		if(punt->s_num == 0 ) { punt++; }
 		else {
@@ -189,7 +209,7 @@ void show_seatsmap(int sd) {
 	//memset(option,0,10);
 	
 	sprintf(mat_clmns,"%d",info.clmn);
-	sprintf(mat_raws,"%d",info.raws);
+	sprintf(mat_raws,"%d",info.rows);
 
 	//Handshake before sending map
 	write(sd,mat_raws,3);	
@@ -201,7 +221,7 @@ void show_seatsmap(int sd) {
 	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;
 	char str_buff[1];
 	
-	for(i = 0; i < info.raws; i++) {
+	for(i = 0; i < info.rows; i++) {
 		for(j = 0; j < info.clmn; j++) {
 			sprintf(str_buff,"%c",temp_matrix[i][j]);
 			write(sd,str_buff,1);
@@ -256,49 +276,25 @@ int perform_action(int sock_descriptor) {
 	close(sock_descriptor);
 }
 
-int create_map(int raws,int columns) {
+int create_map(unsigned int raws,unsigned int columns) {
 
 	int i,j,fd;
-	char * endptr;
-
-	info.raws = raws;	
+	info.rows = raws;	
 	info.clmn = columns;	
-
-	if (open("./seats_map/seats.map",O_RDWR,0660) != -1) { return; }	
-	else {
-		fd = open("./seats_map/seats.map",O_CREAT | O_RDWR,0660);
-		if (fd < 0 ) { perror("Error in 'open'"); exit(1); }
-		
-		for(i=0; i < info.raws; i++) {
-			for(j=0; j < info.clmn; j++) {
-				write(fd,"X",1);
-			}
-		}
-	
-		close(fd);
-		return 1;
-	}	
+	matrix_init();
 }
 
 void matrix_init() {
-	int 	i,j;
-	char temp_string[1];
-	char temp_char;
-	
-	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
-	if (fd < 0) { perror("Open issue at matrix_init"); exit(1); }
-
-	info.matrix = (char *)malloc(info.raws*info.clmn*sizeof(char));
+	int i,j;
+	info.matrix = (char *)malloc(info.rows*info.clmn*sizeof(char));
 	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;	
 	//How to read this ^: "temp_matrix is a pointer of info.clmn characters"
 	
-	for(i = 0; i < info.raws; i++) {
-		for(j = 0; j < info.clmn; j++) {	
-			read(fd,temp_string,1);
-			sscanf(temp_string," %c",&temp_matrix[i][j]);	
+	for(i = 0; i < info.rows; i++) {
+		for(j = 0; j < info.clmn; j++) {
+			temp_matrix[i][j] = 'X';	
 		}
 	}
-	//print_matrix();
 }
 
 void print_matrix() {
@@ -306,7 +302,7 @@ void print_matrix() {
 	int i,j;
 	char (*temp_matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;	
 	
-	for(i = 0; i < info.raws; i++) {
+	for(i = 0; i < info.rows; i++) {
 		for(j = 0; j < info.clmn; j++) {
 			printf("[%c] ",temp_matrix[i][j]);
 		}
@@ -447,13 +443,13 @@ int seats_available(unsigned int num, struct seat * seats) {
 }
 
 int reservation_list_init() {	
-	struct reservation * posti_occupati =(struct reservation *)malloc(info.raws*info.clmn*sizeof(struct reservation ));
+	struct reservation * posti_occupati =(struct reservation *)malloc(info.rows*info.clmn*sizeof(struct reservation ));
 	res_list = posti_occupati;
 }
 
 void check_res_status() {
 	int i = 0;	
-	for(i = 0; i < info.raws*info.clmn; i++) {
+	for(i = 0; i < info.rows*info.clmn; i++) {
 		if (res_list[i].s_num == 0 ) {}
 		else { printf("key: %s, seats reserved %d\n",res_list[i].reservation_code,res_list[i].s_num); }
 	}
@@ -464,7 +460,7 @@ void init_rand_generator() {
 }
 
 void close_routine() {
-	save_reservation_array(info.raws*info.clmn,info.key_length);
+	save_reservation_array(info.rows*info.clmn,info.key_length);
 	exit(0);	
 }
 
@@ -486,7 +482,7 @@ error_t parse_opt (int key, char * arg, struct argp_state *state) {
 					case 0:
 						temp = strtol(arg,NULL,10);
 						if(temp < 1)argp_failure(state,1,0,"ERROR \"%s\" is not a valid rows number\n",arg);
-						info.raws = temp;
+						info.rows = temp;
 						break;
 					case 1:
 						temp = strtol(arg,NULL,10);
@@ -496,6 +492,29 @@ error_t parse_opt (int key, char * arg, struct argp_state *state) {
 			}break;
 		}
 	return 0; 
+}
+
+int new_map(char * row, char * clmn ) {
+	printf("The new cinema has %s rows and %s columns\n",row,clmn);
+	unsigned int r = strtol(row,NULL,10);
+	unsigned int c = strtol(clmn,NULL,10);
+	if ( r == 0 || c == 0 ) { printf("dimension 0 is not accepted\n"); exit(1); }
+	create_map(r,c);
+	int fd = open("./seats_map/seats.map",O_WRONLY | O_CREAT | O_TRUNC,0660);
+	if (fd < 0) { perror("Open issue at matrix_init"); exit(1); }
+	write(fd,&r,sizeof(unsigned int));
+	write(fd,&c,sizeof(unsigned int));
+	fd = open("./seats_res/reservations",O_WRONLY | O_CREAT | O_TRUNC,0660);
+	if (fd < 0) { perror("Error in reservations file\n"); exit(1); } 
+}
+
+int previous_map() {
+	unsigned int r,c;
+	int fd = open("./seats_map/seats.map",O_RDONLY,0660);
+	if (fd < 0) { perror("Open fails at matrix_init"); exit(1); }
+	read(fd,&r,sizeof(unsigned int));
+	read(fd,&c,sizeof(unsigned int));
+	create_map(r,c);
 }
 
 int main(int argc, char **argv) {
@@ -514,28 +533,16 @@ int main(int argc, char **argv) {
 	if(sigaction(SIGQUIT,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 	if(sigaction(SIGILL,&sig_act,NULL)){ perror("sigaction"); exit(-1);}
 
-	struct argp_option options[] =
-		{
-			{ "seats", 's', "NUM", 0, "Show a dot on the screen"},
-			{ 0 }
-		};
-	struct argp argp = { options, parse_opt, "raws columns" };
-	argp_parse(&argp,argc,argv,0,0,0); 
-
-
+	if ( argc == 3 ) { new_map(argv[1],argv[2]); }
+	else { previous_map(); }
 
 	//initialize the random code generator
 	init_rand_generator();
 
-	create_map(6,6);
-
-	matrix_init();
-	
-	//load the last seats configuration
 	reservation_list_init();
 
 	info.key_length = 10;
-	load_reservation_array(info.raws*info.clmn,info.key_length);
+	load_reservation_array(info.rows*info.clmn,info.key_length);
 	
 	//check the reservation array status
 	check_res_status();
