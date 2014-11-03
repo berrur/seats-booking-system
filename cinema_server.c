@@ -544,7 +544,6 @@ int main(int argc, char **argv) {
 	info.key_length = 10;
 	load_reservation_array(info.rows*info.clmn,info.key_length);
 	
-	//check the reservation array status
 	check_res_status();
 	
 	listening_function();
