@@ -19,7 +19,7 @@
 * exit(1) methods have to be replaced with a closing procedure;
 *
 */
-
+//volatile sig_atomic_t keep_going = 1;
 
 struct server_data {
 	unsigned int key_length;
@@ -27,14 +27,8 @@ struct server_data {
 	unsigned int clmn;
 	char * matrix;
 };
-/*
-struct incoming {
-	int socket_descriptor;
-	struct sockaddr_in client_data;
-}
-*/	
 struct reservation { 				//entry of a collection of reservations
-	unsigned int s_num;				//number of seats reserved for a single reservation
+	unsigned int s_num;			//number of seats reserved for a single reservation
 	char * reservation_code;		//unique code generated for a single reservation
 	struct seat * seats; 			//array of reserved seats;	
 };
@@ -50,10 +44,10 @@ struct reservation * res_list;
 void matrix_init();
 void check_res_status();
 void print_matrix();
-void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
 void release_seats(unsigned int s_num,struct seat * seats_occ);
 void occupy_seats(unsigned int s_num,struct seat * seats_occ);
 //int methods
+int perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry);
 int seats_available(unsigned int num, struct seat * seats);
 //char * methods
 char * get_reservation_code();
@@ -83,41 +77,51 @@ int check_constrains(unsigned int s_num, struct seat * arr) {
 }
 
 void reservation(int sd) {
-	
 	int res;
 	unsigned int seats_num = 0;
 
 	//receive seats number
 	res = read(sd,&seats_num,sizeof(seats_num));
 	if(res < sizeof(seats_num)){
-		if(res == -1)perror("receive number of seats");
-		else puts("Error: received invalid seats num");
+		if(res == -1 ){perror("receive number of seats"); }
+		else { puts("Error: received invalid seats num"); }
+		return;
 	}
 		
 	//receive seats
 	struct seat seats_temp[seats_num];
 	res = read(sd,seats_temp,sizeof(seats_temp));
 	if(res < sizeof(seats_temp)) {
-		if(res == -1)perror("receive seats");
-		else puts("Error: mismatch of seats number recived");
+		if(res == -1) { perror("receive seats"); }
+		else { puts("Error: mismatch of seats number recived");}
+		return;
 	}
 	
-	if (no_double_seats(seats_temp,seats_num) == -1 ) { char msg[10] = "RES_ERR"; write(sd,msg,10); return; }	
-	if (check_constrains(seats_num,seats_temp) == -1) { char msg[10] = "RES_ERR"; write(sd,msg,10); return; }
-
-	if (seats_available(seats_num,seats_temp) == 0 ) {  char msg[10] = "RES_ERR"; write(sd,msg,10); return; }
+	if (seats_available(seats_num,seats_temp) == 0 || 
+	   (check_constrains(seats_num,seats_temp) == -1) ||
+	   (no_double_seats(seats_temp,seats_num) == -1 ) ) { 
+		char msg[10] = "RES_ERR";
+		
+		if (write(sd,msg,10) == -1) { perror("send error error"); return; }
+	}
 	else {
 		char msg[10] = "RES_OK";
-		write(sd,msg,10);
+		unsigned int last_res_index;
+		
+		if (write(sd,msg,10) == -1); { perror("send confirmation error"); return; }
+
 		struct reservation * r_entry;	
-		perform_reservation(seats_num,seats_temp,&r_entry);
-		save_reservation_array(info.rows*info.clmn,info.key_length);
-		write(sd,r_entry->reservation_code,info.key_length+1);
-	
-	}	
+		last_res_index = perform_reservation(seats_num,seats_temp,&r_entry);
+		if ((save_reservation_array(info.rows*info.clmn,info.key_length)) == -1 ) { delete_last_reservation(last_res_index);return; }		
+		if (write(sd,r_entry->reservation_code,info.key_length+1) == -1 ) { 
+			puts("error sending reservation code");
+			delete_last_reservation(last_res_index); 
+		}
+	}
+	return;	
 }
 
-void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry) {
+int perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct reservation ** r_entry) {
 	
 	occupy_seats(seats_num,seats_occ);	
 	
@@ -135,14 +139,13 @@ void perform_reservation(unsigned int seats_num,struct seat * seats_occ,struct r
 		
 	//copy the seat buffer into the new entry	
 	void * seats_temp = calloc(seats_num,sizeof(struct seat));
-	if (seats_temp == NULL ) { perror("Calloc error in perform reservation!"); }
+	if (seats_temp == NULL ) { perror("Calloc error in perform reservation!"); exit(1); }
 	
 	new_entry->seats = memcpy(seats_temp,seats_occ,sizeof(struct seat)*seats_num);
 	new_entry->reservation_code = get_reservation_code(); 
 				
 	*r_entry = new_entry;
-	printf("%u,%s\n",res_list[i].s_num,res_list[i].reservation_code);
-	
+	return i;	
 }
 
 char * get_reservation_code() {
@@ -308,6 +311,12 @@ void print_matrix() {
 		}
 		printf("\n");
 	}
+}
+int delete_last_reservation(int last_res_index) {
+	release_seats(res_list[last_res_index].s_num,res_list[last_res_index].seats);			
+	res_list[last_res_index].s_num = 0;
+	free(res_list[last_res_index].reservation_code);
+	free(res_list[last_res_index].seats);
 }
 
 
@@ -487,9 +496,17 @@ int previous_map() {
 	create_map(r,c);
 }
 
+void sig_pipe_handler(int sig_num) {
+	keep_going = 0;
+	signal(SIGPIPE,sig_pipe_handler);	
+}
+
 int main(int argc, char **argv) {
 	
 	// signal management
+	signal(SIGPIPE,SIG_IGN);	
+	//signal(SIGALRM,sig_handler);
+	
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}
 	

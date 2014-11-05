@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <string.h>
+#include <signal.h>
 
 #define BUFFER 1024
 #define RES_DIM 20
@@ -94,20 +95,28 @@ void seats_reservation(char * option) {
 	}
 	
 	connect_function();		
-	write(socket_descriptor,option,10);
+	res = write(socket_descriptor,option,10);
+	if(res < 10) { perror("reservation send error, option"); exit(1); }
 
+	//sends the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
-	if(res == -1){ perror("reservation send error"); exit(-1); }
+	if(res < sizeof(seats_num)) { perror("reservation send error, seats num"); exit(1); }
 	
 	//sends the coordinates of the seats you have chosen
 	res = write(socket_descriptor,seats,sizeof(seats));
-	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(-1); }
-		
-	if(read(socket_descriptor,line,10) == -1 ) { perror("error reading response"); }
+	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(1); }
+	
+	res = read(socket_descriptor,line,10);
+	if (res < 10 ) { perror("error reading response"); exit(1);}
 			
 	if (strcmp(line,"RES_OK") == 0) {
-	
-		if( read(socket_descriptor,line,11) == -1 ) { perror("error reading reservation key"); }
+
+		res = read(socket_descriptor,line,11);
+		if(res < 11) {
+			if (res == -1 ) {perror("error in key reading");exit(1);}
+			else puts("error in key reading"); exit(1);
+		}
+
 		printf(" -----------------------------------------------------\n");			
 		printf("|Your reservation code is %s, don't forget it |\n",line);
 		printf(" -----------------------------------------------------\n");
@@ -143,7 +152,7 @@ void show_seatsmap(char * option) {
 	read(socket_descriptor,temp,3);
 	cinema_raws = strtol(temp,&endptr,10);
 		
-	memset(temp,0,10);
+	//memset(temp,0,10);
 
 	read(socket_descriptor,temp,3);
 	cinema_clmn = strtol(temp,&endptr,10);
@@ -258,8 +267,11 @@ int connect_function() {
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) { perror("Connection Error"); exit(1); }
 	printf("--Estabilished connection with the server--\n");
 }
-
+void sig_handler(int sig_num) {
+	printf("olèèèè\n");
+}
 int main() {
+	signal(SIGPIPE,sig_handler);
 	action_chooser();
 }
 
