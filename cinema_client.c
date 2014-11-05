@@ -59,39 +59,30 @@ void seats_reservation(char * option) {
 	connect_function();		
 	res = write(socket_descriptor,option,10);
 	if(res < 10) { perror("reservation send error, option"); exit(1); }
-
 	//sends the number of seats you want to book
 	res = write(socket_descriptor,&seats_num,sizeof(seats_num));
 	if(res < sizeof(seats_num)) { perror("reservation send error, seats num"); exit(1); }
-	
 	//sends the coordinates of the seats you have chosen
 	res = write(socket_descriptor,seats,sizeof(seats));
 	if(res < sizeof(seats)) { perror("reservation send error, seats data"); exit(1); }
-	
-	res = read(socket_descriptor,line,10);
-	if (res < 10 ) { perror("error reading response"); exit(1);}
+	res = read(socket_descriptor,line,11);
+	if (res < 11 ) { perror("error reading response"); exit(1);}
 			
-	if (strcmp(line,"RES_OK") == 0) {
-
-		res = read(socket_descriptor,line,11);
-		if(res < 11) {
-			if (res == -1 ) {perror("error in key reading");exit(1);}
-			else puts("error in key reading"); exit(1);
-		}
-
-		printf(" -----------------------------------------------------\n");			
-		printf("|Your reservation code is %s, don't forget it |\n",line);
-		printf(" -----------------------------------------------------\n");
-		
-		close(socket_descriptor);
-		exit(1);
-
-	} else {	
+	if (strcmp(line,"RES_ERR") == 0) {
 
 		printf("---------------------------------------\n");
 		printf("|	There has been some errors    |\n");
 		printf("| 	     please try again         |\n");	
 		printf("---------------------------------------\n");		
+		close(socket_descriptor);
+		exit(1);
+
+	} else {
+
+		printf(" -----------------------------------------------------\n");			
+		printf("|Your reservation code is %s, don't forget it |\n",line);
+		printf(" -----------------------------------------------------\n");
+		
 		close(socket_descriptor);
 		exit(1);
 
@@ -114,11 +105,8 @@ void show_seatsmap(char * option) {
 	read(socket_descriptor,temp,3);
 	cinema_raws = strtol(temp,&endptr,10);
 		
-	//memset(temp,0,10);
-
 	read(socket_descriptor,temp,3);
 	cinema_clmn = strtol(temp,&endptr,10);
-
 	size_t size = (cinema_raws*cinema_clmn);
 	mbuffer = (char *)malloc(size*sizeof(char));
 	memset(mbuffer,0,size*sizeof(char));
@@ -214,7 +202,7 @@ int connect_function() {
 	
 	int ds_sock;
 	int length_addr;	
-	int port = 4444;
+	int port = 4446;
 	char * ip = "127.0.0.1"; //assuming that the servers is running locally
 
 	struct sockaddr_in addr;
