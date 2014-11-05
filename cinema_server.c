@@ -15,11 +15,6 @@
 #define BUFFER 1024
 #define RES_DIM 20
 
-/*
-* exit(1) methods have to be replaced with a closing procedure;
-*
-*/
-//volatile sig_atomic_t keep_going = 1;
 
 struct server_data {
 	unsigned int key_length;
@@ -39,7 +34,7 @@ struct seat {
 
 struct server_data info;
 struct reservation * res_list;
-
+unsigned int keep_going = 1;
 //void methods
 void matrix_init();
 void check_res_status();
@@ -101,22 +96,23 @@ void reservation(int sd) {
 	   (check_constrains(seats_num,seats_temp) == -1) ||
 	   (no_double_seats(seats_temp,seats_num) == -1 ) ) { 
 		char msg[10] = "RES_ERR";
-		
-		if (write(sd,msg,10) == -1) { perror("send error error"); return; }
+		if (send(sd,msg,10,0) == -1) { perror("send error error");close(sd); return; }
+		if(keep_going == 0 ) { puts("sigpipe received, aborting reservation routine");close(sd); keep_going = 1; }		
 	}
 	else {
 		char msg[10] = "RES_OK";
 		unsigned int last_res_index;
 		
-		if (write(sd,msg,10) == -1); { perror("send confirmation error"); return; }
-
-		struct reservation * r_entry;	
+		if (send(sd,msg,10,0) == -1) { puts("send confirmation error");close(sd); return; }
+		if(keep_going == 0 ) { puts("sigpipe received, aborting reservation routine");close(sd); return; }
+		struct reservation * r_entry;
 		last_res_index = perform_reservation(seats_num,seats_temp,&r_entry);
 		if ((save_reservation_array(info.rows*info.clmn,info.key_length)) == -1 ) { delete_last_reservation(last_res_index);return; }		
-		if (write(sd,r_entry->reservation_code,info.key_length+1) == -1 ) { 
+		if (send(sd,r_entry->reservation_code,info.key_length+1,0) == -1 ) { 
 			puts("error sending reservation code");
 			delete_last_reservation(last_res_index); 
 		}
+		if(keep_going == 0 ) { puts("sigpipe received, aborting reservation routine");delete_last_reservation(last_res_index);keep_going = 1;  }
 	}
 	return;	
 }
@@ -170,14 +166,15 @@ char * get_reservation_code() {
 int delete_reservation(int sd) {
 	char client_key[30];
 	if (read(sd,client_key,11) == -1 ) { perror("client_key read error"); }
-	if (perform_delete(client_key) == 0) { 
-		printf("non entra\n");
+	if (perform_delete(client_key) == 0) {
 		write(sd,"WRONG_KEY",20);
+		if(keep_going == 0) { keep_going = 1; }
 		close(sd);
 		return 0;
 	}else {
 		save_reservation_array(info.rows*info.clmn,info.key_length);
 		write(sd,"DEL_CONFIRMED",20);
+		if(keep_going == 0) { keep_going = 1; }
 		return 1;
 	}
 }
@@ -208,15 +205,16 @@ void show_seatsmap(int sd) {
 	char mat_clmns[3];
 	char option[10];
 	char * mbuffer;
-
-	//memset(option,0,10);
 	
 	sprintf(mat_clmns,"%d",info.clmn);
 	sprintf(mat_raws,"%d",info.rows);
 
 	//Handshake before sending map
-	write(sd,mat_raws,3);	
-	write(sd,mat_clmns,3);
+	if (write(sd,mat_raws,3) == -1 ) {return; }
+	if(keep_going == 0) { keep_going = 1; return; }	
+	
+	if (write(sd,mat_clmns,3) == -1) {return; }
+	if(keep_going == 0) { keep_going = 1;return; }
 	
 	//Sending map;
 	char * qua;
@@ -227,7 +225,8 @@ void show_seatsmap(int sd) {
 	for(i = 0; i < info.rows; i++) {
 		for(j = 0; j < info.clmn; j++) {
 			sprintf(str_buff,"%c",temp_matrix[i][j]);
-			write(sd,str_buff,1);
+			if (write(sd,str_buff,1) == -1 ) { return; }
+			if(keep_going == 0) { keep_going = 1;return; }
 		}
 	}	
 }
@@ -285,6 +284,7 @@ int create_map(unsigned int raws,unsigned int columns) {
 	info.rows = raws;	
 	info.clmn = columns;	
 	matrix_init();
+
 }
 
 void matrix_init() {
@@ -295,7 +295,7 @@ void matrix_init() {
 	
 	for(i = 0; i < info.rows; i++) {
 		for(j = 0; j < info.clmn; j++) {
-			temp_matrix[i][j] = 'X';	
+			temp_matrix[i][j] = 'O';	
 		}
 	}
 }
@@ -381,8 +381,6 @@ int load_reservation_array(unsigned int arr_dim, unsigned int chiav_dim){
 		if(res < sizeof(punt->s_num)){
 			if(res == -1)
 				perror("reading s_num from file");
-			/*else
-				puts("error: reading s_num from file");*/
 		return(-1);
 		}
 		
@@ -426,7 +424,7 @@ void occupy_seats(unsigned int num, struct seat * seats_occ) {
 	char (*matrix)[info.clmn] =(char (*)[info.clmn]) info.matrix;
 	struct seat * punt = seats_occ;
 	while( (punt - seats_occ) < num ) {
-		matrix[punt->row][punt->col] = 'O';
+		matrix[punt->row][punt->col] = 'X';
 		punt++;
 	}
 }
@@ -435,7 +433,7 @@ void release_seats(unsigned int num, struct seat * seats_occ) {
 	char (*matrix)[info.clmn] = (char (*)[info.clmn])info.matrix;
 	struct seat * punt = seats_occ;
 	while(punt - seats_occ < num ) {
-		matrix[punt->row][punt->col] = 'X';
+		matrix[punt->row][punt->col] = 'O';
 		punt++;
 	}
 }
@@ -444,7 +442,7 @@ int seats_available(unsigned int num, struct seat * seats) {
 	char (*matrix)[info.clmn] =(char (*)[info.clmn]) info.matrix;
 	struct seat * punt = seats;
 	while( (punt-seats) < num ){
-		if( matrix[punt->row][punt->col] != 'X')
+		if( matrix[punt->row][punt->col] != 'O')
 			return 0;
 		punt++;
 	}
@@ -470,14 +468,14 @@ void init_rand_generator() {
 
 void close_routine() {
 	save_reservation_array(info.rows*info.clmn,info.key_length);
-	exit(0);	
+	exit(0);
 }
 
 int new_map(char * row, char * clmn ) {
-	printf("The new cinema has %s rows and %s columns\n",row,clmn);
 	unsigned int r = strtol(row,NULL,10);
 	unsigned int c = strtol(clmn,NULL,10);
 	if ( r == 0 || c == 0 ) { printf("dimension 0 is not accepted\n"); exit(1); }
+	printf("The new cinema has %u rows and %u columns\n",r,c);
 	create_map(r,c);
 	int fd = open("./seats_map/seats.map",O_WRONLY | O_CREAT | O_TRUNC,0660);
 	if (fd < 0) { perror("Open issue at matrix_init"); exit(1); }
@@ -504,8 +502,7 @@ void sig_pipe_handler(int sig_num) {
 int main(int argc, char **argv) {
 	
 	// signal management
-	signal(SIGPIPE,SIG_IGN);	
-	//signal(SIGALRM,sig_handler);
+	signal(SIGPIPE,sig_pipe_handler);
 	
 	sigset_t set;
 	if(sigfillset(&set)){ perror("filling set of signals"); exit(-1);}

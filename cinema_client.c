@@ -8,9 +8,6 @@
 #include <string.h>
 #include <signal.h>
 
-#define BUFFER 1024
-#define RES_DIM 20
-
 int socket_descriptor;
 
 struct seat{
@@ -19,49 +16,14 @@ struct seat{
 };
 
 /*
-*
-* functions declarations
-*
-*/
+ * functions declarations
+ */
 
 void action_chooser();
 void show_seatsmap(char * option);
 void print_map(char * mbuffer, unsigned int cinema_raws, unsigned int cinema_clmn);
 void seats_reservation(char * option);
 int connect_function();
-//int check_constrains(unsigned int a, unsigned int b);
-
-/*
-*	
-*	Receive the seats-map from the server and
-*	saves it into a matrix,
-*
-*/
-
-//Check if the seats the client selected previously have doubles
-int no_double_seats(struct seat * seats,unsigned int seats_num) {
-	int i,j;
-	for ( i = 0; i < seats_num; i++ ) {		
-		for ( j = 0; j < seats_num; j++ ) {
-			if (i == j ) {}
-			else if (seats[j].row == seats[i].row && seats[j].col == seats[i].col ) {
-				return -1;
-			}
-		}
-	}
-	return 1;
-}
-
-int check_constrains(unsigned int a,unsigned int b,unsigned int s_num, struct seat * arr) {
-	struct seat * punt = arr;
-	while( punt - arr < s_num ) {
-		if ( punt->row >= a || punt->col >= b ) {
-			return 0;	
-		}
-		punt++;	
-	}
-	return 1;
-}
 	
 void seats_reservation(char * option) {
 	int res;
@@ -175,7 +137,7 @@ void show_seatsmap(char * option) {
 	print_map(mbuffer,cinema_raws,cinema_clmn);	
 	printf("---------------------------------\n");
 	close(socket_descriptor);
-	exit(0);
+	action_chooser();
 }
 
 void delete_reservation(char * option) {
@@ -237,7 +199,7 @@ void action_chooser() {
 		else if (strcmp(option,"-D\n")==0) {
 			delete_reservation(option);		
 		}
-		else if (strcmp(option,"-E\n")==0) {
+		else if (strcmp(option,"-E\n")==0) {		
 			exit(1);
 		}
 		else {
@@ -253,7 +215,7 @@ int connect_function() {
 	int ds_sock;
 	int length_addr;	
 	int port = 4444;
-	char * ip = "127.0.0.1";
+	char * ip = "127.0.0.1"; //assuming that the servers is running locally
 
 	struct sockaddr_in addr;
 	
@@ -267,11 +229,8 @@ int connect_function() {
 	if(connect(socket_descriptor,(struct sockaddr *)&addr,length_addr)==-1) { perror("Connection Error"); exit(1); }
 	printf("--Estabilished connection with the server--\n");
 }
-void sig_handler(int sig_num) {
-	printf("olèèèè\n");
-}
+
 int main() {
-	signal(SIGPIPE,sig_handler);
 	action_chooser();
 }
 
